@@ -15,7 +15,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
+      - ./init-scripts/01-init-timescaledb.sql:/docker-entrypoint-initdb.d/01-init-timescaledb.sql
     command: postgres -c listen_addresses='*'
     restart: unless-stopped
     healthcheck:
@@ -50,6 +50,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - DOCKER_ENV=true
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/crypto_risk_db
       - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
