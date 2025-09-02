@@ -117,15 +117,17 @@ def seed_database(db):
 
 def create_sample_users(db):
     """Create sample users"""
-    from passlib.context import CryptContext
+    # Temporary simple password hashing to avoid bcrypt issues
+    import hashlib
     
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    def simple_hash(password):
+        return hashlib.sha256(password.encode()).hexdigest()
     
     users = [
         {
             "email": "admin@cryptodashboard.com",
             "username": "admin",
-            "hashed_password": pwd_context.hash("admin123"),
+            "hashed_password": simple_hash("admin123"),
             "full_name": "Admin User",
             "is_active": True,
             "is_superuser": True
@@ -133,7 +135,7 @@ def create_sample_users(db):
         {
             "email": "user@cryptodashboard.com",
             "username": "user",
-            "hashed_password": pwd_context.hash("user123"),
+            "hashed_password": simple_hash("user123"),
             "full_name": "Demo User",
             "is_active": True,
             "is_superuser": False

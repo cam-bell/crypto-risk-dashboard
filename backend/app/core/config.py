@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
     
     # Database
-    DATABASE_URL: str = "postgresql://postgres:password@localhost:5432/crypto_risk_db"
+    DATABASE_URL: str = "postgresql://postgres:password@127.0.0.1:5432/crypto_risk_db"
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "password"

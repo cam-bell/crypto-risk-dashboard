@@ -41,7 +41,6 @@ class RiskMetric(Base):
 
     # Relationships
     crypto_asset = relationship("CryptoAsset", back_populates="risk_metrics")
-    portfolio = relationship("Portfolio", back_populates="risk_metrics")
 
     # Indexes for TimescaleDB optimization
     __table_args__ = (
