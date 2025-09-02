@@ -1,0 +1,70 @@
+{
+  "name": "crypto-risk-dashboard",
+  "version": "1.0.0",
+  "description": "AI-Powered Crypto Risk Dashboard with real-time portfolio analysis and risk assessment",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:frontend": "cd frontend && npm run start",
+    "start:backend": "cd backend && npm run start",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "cd frontend && npm run test",
+    "test:backend": "cd backend && npm run test",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:backend": "cd backend && npm run lint",
+    "format": "npm run format:frontend && npm run format:backend",
+    "format:frontend": "cd frontend && npm run format",
+    "format:backend": "cd backend && npm run format",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker-compose build",
+    "docker:logs": "docker-compose logs -f",
+    "db:migrate": "cd backend && npm run db:migrate",
+    "db:seed": "cd backend && npm run db:seed",
+    "setup": "npm install && npm run setup:frontend && npm run setup:backend",
+    "setup:frontend": "cd frontend && npm install",
+    "setup:backend": "cd backend && npm install && npm run setup:python",
+    "clean": "npm run clean:frontend && npm run clean:backend",
+    "clean:frontend": "cd frontend && rm -rf .next node_modules",
+    "clean:backend": "cd backend && rm -rf __pycache__ .pytest_cache .coverage dist build *.egg-info"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "cryptocurrency",
+    "portfolio",
+    "risk-analysis",
+    "ai",
+    "dashboard",
+    "nextjs",
+    "fastapi",
+    "typescript",
+    "python"
+  ],
+  "author": "Cameron Bell",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/crypto-risk-dashboard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/crypto-risk-dashboard/issues"
+  },
+  "homepage": "https://github.com/yourusername/crypto-risk-dashboard#readme"
+}
