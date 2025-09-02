@@ -3,7 +3,6 @@ Configuration settings for the Crypto Risk Dashboard
 """
 from typing import List, Optional
 from pydantic_settings import BaseSettings
-from pydantic import validator
 
 
 class Settings(BaseSettings):
@@ -21,21 +20,18 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
     
-    # Database - Support both local and containerized deployment
-    DATABASE_URL: Optional[str] = None
-    POSTGRES_SERVER: str = "localhost"  # Default for local development
+    # Database - Simple, reliable configuration
+    DATABASE_URL: str = "postgresql://postgres:password@127.0.0.1:5432/crypto_risk_db"
+    POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "password"
     POSTGRES_DB: str = "crypto_risk_db"
     POSTGRES_PORT: str = "5432"
     
-    # Redis - Support both local and containerized deployment
-    REDIS_URL: Optional[str] = None
-    REDIS_SERVER: str = "localhost"  # Default for local development
+    # Redis - Simple, reliable configuration
+    REDIS_URL: str = "redis://127.0.0.1:6379"
+    REDIS_SERVER: str = "localhost"
     REDIS_PORT: str = "6379"
-    
-    # Docker environment flag
-    DOCKER_ENV: bool = False
     
     # Security
     SECRET_KEY: str = "your-secret-key-here"
@@ -58,36 +54,6 @@ class Settings(BaseSettings):
     TIMESCALE_CHUNK_TIME_INTERVAL: str = (
         "1 day"
     )
-    
-    @validator("DATABASE_URL", pre=True)
-    def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
-        if isinstance(v, str):
-            return v
-        
-        # Use Docker service names when running in containers
-        server = values.get('POSTGRES_SERVER', 'localhost')
-        if values.get('DOCKER_ENV', False):
-            server = 'postgres'  # Docker service name
-        
-        user = values.get('POSTGRES_USER', 'postgres')
-        password = values.get('POSTGRES_PASSWORD', 'password')
-        port = values.get('POSTGRES_PORT', '5432')
-        db = values.get('POSTGRES_DB', 'crypto_risk_db')
-        
-        return f"postgresql://{user}:{password}@{server}:{port}/{db}"
-    
-    @validator("REDIS_URL", pre=True)
-    def assemble_redis_connection(cls, v: Optional[str], values: dict) -> str:
-        if isinstance(v, str):
-            return v
-        
-        # Use Docker service names when running in containers
-        server = values.get('REDIS_SERVER', 'localhost')
-        if values.get('DOCKER_ENV', False):
-            server = 'redis'  # Docker service name
-        
-        port = values.get('REDIS_PORT', '6379')
-        return f"redis://{server}:{port}"
     
     class Config:
         env_file = ".env"

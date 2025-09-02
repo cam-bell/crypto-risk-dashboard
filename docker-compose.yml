@@ -50,7 +50,6 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DOCKER_ENV=true
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/crypto_risk_db
       - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
