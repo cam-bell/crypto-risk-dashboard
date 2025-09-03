@@ -12,14 +12,14 @@ from fastapi.responses import JSONResponse
 import uvicorn
 from dotenv import load_dotenv
 
+# Import routers
+from app.api.v1.api import api_router
+from app.db.session import engine
+from app.db.base import Base
+
 # Load environment variables
 load_dotenv()
 
-# Import routers (will be created)
-# from app.api.v1.api import api_router
-# from app.core.config import settings
-# from app.db.session import engine
-# from app.db.base import Base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
     print("🚀 Starting Crypto Risk Dashboard API...")
     
     # Create database tables
-    # Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
     
     print("✅ API startup complete")
     
@@ -37,6 +37,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     print("🛑 Shutting down Crypto Risk Dashboard API...")
     print("✅ API shutdown complete")
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -63,7 +64,8 @@ app.add_middleware(
 )
 
 # Include API router
-# app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router, prefix="/api/v1")
+
 
 @app.get("/")
 async def root():
@@ -75,6 +77,7 @@ async def root():
         "docs": "/docs"
     }
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -82,6 +85,7 @@ async def health_check():
         "status": "healthy",
         "timestamp": "2024-12-01T00:00:00Z"
     }
+
 
 @app.get("/api/v1/portfolios")
 async def get_portfolios():
@@ -98,6 +102,7 @@ async def get_portfolios():
         ]
     }
 
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     """Custom HTTP exception handler"""
@@ -106,6 +111,7 @@ async def http_exception_handler(request, exc):
         content={"detail": exc.detail, "status_code": exc.status_code}
     )
 
+
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
     """General exception handler"""
@@ -113,6 +119,7 @@ async def general_exception_handler(request, exc):
         status_code=500,
         content={"detail": "Internal server error", "status_code": 500}
     )
+
 
 if __name__ == "__main__":
     uvicorn.run(
