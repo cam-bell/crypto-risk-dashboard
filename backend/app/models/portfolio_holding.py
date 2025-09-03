@@ -1,6 +1,7 @@
 """
 PortfolioHolding model for individual crypto holdings in portfolios
 """
+
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -15,11 +16,16 @@ def generate_uuid():
 
 class PortfolioHolding(Base):
     """PortfolioHolding model"""
+
     __tablename__ = "portfolio_holdings"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    portfolio_id = Column(String, ForeignKey("portfolios.id"), nullable=False, index=True)
-    crypto_asset_id = Column(String, ForeignKey("crypto_assets.id"), nullable=False, index=True)
+    portfolio_id = Column(
+        String, ForeignKey("portfolios.id"), nullable=False, index=True
+    )
+    crypto_asset_id = Column(
+        String, ForeignKey("crypto_assets.id"), nullable=False, index=True
+    )
     quantity = Column(Float, nullable=False)
     average_buy_price_usd = Column(Float, nullable=False)
     total_invested_usd = Column(Float, nullable=False)

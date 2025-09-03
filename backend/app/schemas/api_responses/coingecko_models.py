@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 
 class CoinGeckoCoin(BaseModel):
     """Model for CoinGecko coin data"""
+
     id: str
     symbol: str
     name: str
@@ -38,6 +39,7 @@ class CoinGeckoCoin(BaseModel):
 
 class CoinGeckoMarketData(BaseModel):
     """Model for CoinGecko market data"""
+
     current_price: Optional[Dict[str, float]] = None
     total_value_locked: Optional[Dict[str, float]] = None
     mcap_to_tvl_ratio: Optional[float] = None
@@ -81,18 +83,25 @@ class CoinGeckoMarketData(BaseModel):
 
 class CoinGeckoPriceHistory(BaseModel):
     """Model for CoinGecko price history data"""
+
     prices: List[List[float]] = Field(description="List of [timestamp, price] pairs")
-    market_caps: List[List[float]] = Field(description="List of [timestamp, market_cap] pairs")
-    total_volumes: List[List[float]] = Field(description="List of [timestamp, volume] pairs")
+    market_caps: List[List[float]] = Field(
+        description="List of [timestamp, market_cap] pairs"
+    )
+    total_volumes: List[List[float]] = Field(
+        description="List of [timestamp, volume] pairs"
+    )
 
 
 class CoinGeckoTrendingCoin(BaseModel):
     """Model for CoinGecko trending coin data"""
+
     item: Dict[str, Any] = Field(description="Trending coin item data")
 
 
 class CoinGeckoGlobalData(BaseModel):
     """Model for CoinGecko global market data"""
+
     active_cryptocurrencies: int
     upcoming_icos: int
     ongoing_icos: int
@@ -107,11 +116,13 @@ class CoinGeckoGlobalData(BaseModel):
 
 class CoinGeckoExchangeRates(BaseModel):
     """Model for CoinGecko exchange rates"""
+
     rates: Dict[str, Dict[str, Any]]
 
 
 class CoinGeckoSearchResult(BaseModel):
     """Model for CoinGecko search results"""
+
     coins: List[Dict[str, Any]]
     exchanges: List[Dict[str, Any]]
     categories: List[Dict[str, Any]]

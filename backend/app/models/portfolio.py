@@ -1,6 +1,7 @@
 """
 Portfolio model for user portfolio management
 """
+
 from sqlalchemy import Column, String, Float, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -15,6 +16,7 @@ def generate_uuid():
 
 class Portfolio(Base):
     """Portfolio model"""
+
     __tablename__ = "portfolios"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -36,8 +38,12 @@ class Portfolio(Base):
 
     # Relationships
     user = relationship("User", back_populates="portfolios")
-    holdings = relationship("PortfolioHolding", back_populates="portfolio", cascade="all, delete-orphan")
-    risk_metrics = relationship("PortfolioRiskMetric", back_populates="portfolio", cascade="all, delete-orphan")
+    holdings = relationship(
+        "PortfolioHolding", back_populates="portfolio", cascade="all, delete-orphan"
+    )
+    risk_metrics = relationship(
+        "PortfolioRiskMetric", back_populates="portfolio", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Portfolio(id={self.id}, name={self.name}, user_id={self.user_id})>"

@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 
 class AlphaVantageExchangeRate(BaseModel):
     """Model for Alpha Vantage exchange rate data"""
+
     From_Currency_Code: str
     From_Currency_Name: str
     To_Currency_Code: str
@@ -17,23 +18,27 @@ class AlphaVantageExchangeRate(BaseModel):
 
 class AlphaVantageExchangeRateResponse(BaseModel):
     """Model for Alpha Vantage exchange rate response"""
+
     Realtime_Currency_Exchange_Rate: AlphaVantageExchangeRate
 
 
 class AlphaVantageCryptoDaily(BaseModel):
     """Model for Alpha Vantage daily cryptocurrency data"""
+
     Time_Series__Digital_Currency_Daily: Dict[str, Dict[str, str]]
     Meta_Data: Dict[str, str]
 
 
 class AlphaVantageCryptoIntraday(BaseModel):
     """Model for Alpha Vantage intraday cryptocurrency data"""
+
     Time_Series__Digital_Currency_Intraday: Dict[str, Dict[str, str]]
     Meta_Data: Dict[str, str]
 
 
 class AlphaVantageEconomicIndicator(BaseModel):
     """Model for Alpha Vantage economic indicator data"""
+
     name: str
     interval: str
     unit: str
@@ -42,6 +47,7 @@ class AlphaVantageEconomicIndicator(BaseModel):
 
 class AlphaVantageSectorPerformance(BaseModel):
     """Model for Alpha Vantage sector performance data"""
+
     Rank_A__Real_Time_Performance: str
     Rank_B__1_Day_Performance: str
     Rank_C__5_Day_Performance: str
@@ -56,6 +62,7 @@ class AlphaVantageSectorPerformance(BaseModel):
 
 class AlphaVantageSectorPerformanceResponse(BaseModel):
     """Model for Alpha Vantage sector performance response"""
+
     Meta_Data: Dict[str, str]
     Rank_A__Real_Time_Performance: Dict[str, str]
     Rank_B__1_Day_Performance: Dict[str, str]
@@ -71,6 +78,7 @@ class AlphaVantageSectorPerformanceResponse(BaseModel):
 
 class AlphaVantageNewsSentiment(BaseModel):
     """Model for Alpha Vantage news sentiment data"""
+
     title: str
     url: str
     time_published: str
@@ -88,6 +96,7 @@ class AlphaVantageNewsSentiment(BaseModel):
 
 class AlphaVantageNewsSentimentResponse(BaseModel):
     """Model for Alpha Vantage news sentiment response"""
+
     items: str
     sentiment_score_definition: str
     relevance_score_definition: str
@@ -96,10 +105,12 @@ class AlphaVantageNewsSentimentResponse(BaseModel):
 
 class AlphaVantageTimeSeriesIntraday(BaseModel):
     """Model for Alpha Vantage time series intraday data"""
+
     Meta_Data: Dict[str, str]
     Time_Series__1min: Dict[str, Dict[str, str]]
 
 
 class AlphaVantageErrorResponse(BaseModel):
     """Model for Alpha Vantage error response"""
+
     Error_Message: str

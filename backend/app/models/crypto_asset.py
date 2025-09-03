@@ -1,6 +1,7 @@
 """
 CryptoAsset model for cryptocurrency information
 """
+
 from sqlalchemy import Column, String, Float, Boolean, Text, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -15,6 +16,7 @@ def generate_uuid():
 
 class CryptoAsset(Base):
     """CryptoAsset model"""
+
     __tablename__ = "crypto_assets"
 
     id = Column(String, primary_key=True, default=generate_uuid)

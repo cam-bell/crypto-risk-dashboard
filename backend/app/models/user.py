@@ -1,6 +1,7 @@
 """
 User model for authentication and profile management
 """
+
 from sqlalchemy import Column, String, DateTime, Boolean, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -15,6 +16,7 @@ def generate_uuid():
 
 class User(Base):
     """User model"""
+
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -31,8 +33,15 @@ class User(Base):
     last_login = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    portfolios = relationship("Portfolio", back_populates="user", cascade="all, delete-orphan")
-    user_settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    portfolios = relationship(
+        "Portfolio", back_populates="user", cascade="all, delete-orphan"
+    )
+    user_settings = relationship(
+        "UserSettings",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
     alerts = relationship("Alert", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):

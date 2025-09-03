@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 
 class EtherscanTransaction(BaseModel):
     """Model for Etherscan transaction data"""
+
     blockNumber: str
     timeStamp: str
     hash: str
@@ -26,6 +27,7 @@ class EtherscanTransaction(BaseModel):
 
 class EtherscanInternalTransaction(BaseModel):
     """Model for Etherscan internal transaction data"""
+
     blockNumber: str
     timeStamp: str
     hash: str
@@ -44,6 +46,7 @@ class EtherscanInternalTransaction(BaseModel):
 
 class EtherscanTokenTransfer(BaseModel):
     """Model for Etherscan token transfer data"""
+
     blockNumber: str
     timeStamp: str
     hash: str
@@ -67,6 +70,7 @@ class EtherscanTokenTransfer(BaseModel):
 
 class EtherscanNFTTransfer(BaseModel):
     """Model for Etherscan NFT transfer data"""
+
     blockNumber: str
     timeStamp: str
     hash: str
@@ -90,6 +94,7 @@ class EtherscanNFTTransfer(BaseModel):
 
 class EtherscanGasOracle(BaseModel):
     """Model for Etherscan gas oracle data"""
+
     SafeLow: str
     SafeLowWait: str
     Fast: str
@@ -103,6 +108,7 @@ class EtherscanGasOracle(BaseModel):
 
 class EtherscanBlock(BaseModel):
     """Model for Etherscan block data"""
+
     number: str
     hash: str
     parentHash: str
@@ -126,6 +132,7 @@ class EtherscanBlock(BaseModel):
 
 class EtherscanTransactionReceipt(BaseModel):
     """Model for Etherscan transaction receipt data"""
+
     transactionHash: str
     transactionIndex: str
     blockHash: str
@@ -143,6 +150,7 @@ class EtherscanTransactionReceipt(BaseModel):
 
 class EtherscanAccountBalance(BaseModel):
     """Model for Etherscan account balance response"""
+
     status: str
     message: str
     result: str
@@ -150,6 +158,7 @@ class EtherscanAccountBalance(BaseModel):
 
 class EtherscanTransactionList(BaseModel):
     """Model for Etherscan transaction list response"""
+
     status: str
     message: str
     result: List[EtherscanTransaction]
@@ -157,6 +166,7 @@ class EtherscanTransactionList(BaseModel):
 
 class EtherscanInternalTransactionList(BaseModel):
     """Model for Etherscan internal transaction list response"""
+
     status: str
     message: str
     result: List[EtherscanInternalTransaction]
@@ -164,6 +174,7 @@ class EtherscanInternalTransactionList(BaseModel):
 
 class EtherscanTokenTransferList(BaseModel):
     """Model for Etherscan token transfer list response"""
+
     status: str
     message: str
     result: List[EtherscanTokenTransfer]
@@ -171,6 +182,7 @@ class EtherscanTokenTransferList(BaseModel):
 
 class EtherscanNFTTransferList(BaseModel):
     """Model for Etherscan NFT transfer list response"""
+
     status: str
     message: str
     result: List[EtherscanNFTTransfer]
@@ -178,6 +190,7 @@ class EtherscanNFTTransferList(BaseModel):
 
 class EtherscanGasOracleResponse(BaseModel):
     """Model for Etherscan gas oracle response"""
+
     status: str
     message: str
     result: EtherscanGasOracle
@@ -185,6 +198,7 @@ class EtherscanGasOracleResponse(BaseModel):
 
 class EtherscanBlockResponse(BaseModel):
     """Model for Etherscan block response"""
+
     jsonrpc: str
     id: int
     result: EtherscanBlock
@@ -192,6 +206,7 @@ class EtherscanBlockResponse(BaseModel):
 
 class EtherscanTransactionReceiptResponse(BaseModel):
     """Model for Etherscan transaction receipt response"""
+
     jsonrpc: str
     id: int
     result: EtherscanTransactionReceipt

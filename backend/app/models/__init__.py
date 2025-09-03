@@ -1,6 +1,7 @@
 """
 Models package initialization
 """
+
 from .user import User
 from .crypto_asset import CryptoAsset
 from .portfolio import Portfolio

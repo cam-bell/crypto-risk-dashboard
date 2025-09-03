@@ -10,9 +10,7 @@ celery_app = Celery(
     "crypto_risk_dashboard",
     broker=api_config.celery_broker_url,
     backend=api_config.celery_result_backend,
-    include=[
-        "app.background_tasks.tasks"
-    ]
+    include=["app.background_tasks.tasks"],
 )
 
 # Celery configuration
@@ -65,9 +63,7 @@ celery_app.conf.beat_schedule = {
 celery_app.conf.task_routes = {
     "app.background_tasks.tasks.fetch_crypto_prices": {"queue": "crypto_data"},
     "app.background_tasks.tasks.fetch_market_data": {"queue": "market_data"},
-            "app.background_tasks.tasks.fetch_wallet_analysis": {
-            "queue": "blockchain_data"
-        },
+    "app.background_tasks.tasks.fetch_wallet_analysis": {"queue": "blockchain_data"},
     "app.background_tasks.tasks.cleanup_cache": {"queue": "maintenance"},
     "app.background_tasks.tasks.health_check_apis": {"queue": "monitoring"},
 }
@@ -84,7 +80,7 @@ def debug_task(self):
 def setup_periodic_tasks(sender, **kwargs):
     """Setup periodic tasks after Celery configuration"""
     logger.info("Setting up periodic tasks")
-    
+
     # Add custom periodic tasks if needed
     # Note: fetch_crypto_prices is imported in tasks.py
     pass

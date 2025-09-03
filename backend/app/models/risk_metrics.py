@@ -1,6 +1,7 @@
 """
 RiskMetric model as TimescaleDB hypertable for time-series risk data
 """
+
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Index
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -15,13 +16,14 @@ def generate_uuid():
 
 class RiskMetric(Base):
     """RiskMetric model - TimescaleDB hypertable"""
+
     __tablename__ = "risk_metrics"
 
     id = Column(String, primary_key=True, default=generate_uuid)
     crypto_asset_id = Column(String, ForeignKey("crypto_assets.id"), nullable=True)
     portfolio_id = Column(String, ForeignKey("portfolios.id"), nullable=True)
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
-    
+
     # Risk metrics
     volatility = Column(Float, nullable=True)
     var_95 = Column(Float, nullable=True)  # Value at Risk 95%
@@ -33,7 +35,7 @@ class RiskMetric(Base):
     beta = Column(Float, nullable=True)
     correlation_sp500 = Column(Float, nullable=True)
     correlation_btc = Column(Float, nullable=True)
-    
+
     # Additional metrics
     skewness = Column(Float, nullable=True)
     kurtosis = Column(Float, nullable=True)
@@ -44,9 +46,9 @@ class RiskMetric(Base):
 
     # Indexes for TimescaleDB optimization
     __table_args__ = (
-        Index('idx_risk_metrics_timestamp', 'timestamp'),
-        Index('idx_risk_metrics_crypto_timestamp', 'crypto_asset_id', 'timestamp'),
-        Index('idx_risk_metrics_portfolio_timestamp', 'portfolio_id', 'timestamp'),
+        Index("idx_risk_metrics_timestamp", "timestamp"),
+        Index("idx_risk_metrics_crypto_timestamp", "crypto_asset_id", "timestamp"),
+        Index("idx_risk_metrics_portfolio_timestamp", "portfolio_id", "timestamp"),
     )
 
     def __repr__(self):

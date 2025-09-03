@@ -1,6 +1,7 @@
 """
 Database session configuration
 """
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -10,14 +11,14 @@ from app.core.config import settings
 engine = create_engine(
     settings.DATABASE_URL.replace("postgresql://", "postgresql://"),
     pool_pre_ping=True,
-    echo=settings.DEBUG
+    echo=settings.DEBUG,
 )
 
 # Async engine for application
 async_engine = create_async_engine(
     settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
     pool_pre_ping=True,
-    echo=settings.DEBUG
+    echo=settings.DEBUG,
 )
 
 # Session makers

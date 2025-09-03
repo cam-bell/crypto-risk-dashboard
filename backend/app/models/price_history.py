@@ -1,6 +1,7 @@
 """
 PriceHistory model as TimescaleDB hypertable for time-series price data
 """
+
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Index
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -15,6 +16,7 @@ def generate_uuid():
 
 class PriceHistory(Base):
     """PriceHistory model - TimescaleDB hypertable"""
+
     __tablename__ = "price_history"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -34,9 +36,9 @@ class PriceHistory(Base):
 
     # Indexes for TimescaleDB optimization
     __table_args__ = (
-        Index('idx_price_history_crypto_timestamp', 'crypto_asset_id', 'timestamp'),
-        Index('idx_price_history_timestamp', 'timestamp'),
-        Index('idx_price_history_crypto_asset', 'crypto_asset_id'),
+        Index("idx_price_history_crypto_timestamp", "crypto_asset_id", "timestamp"),
+        Index("idx_price_history_timestamp", "timestamp"),
+        Index("idx_price_history_crypto_asset", "crypto_asset_id"),
     )
 
     def __repr__(self):
