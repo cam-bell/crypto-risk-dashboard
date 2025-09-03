@@ -13,7 +13,7 @@ fi
 
 # Check if Redis is running
 echo "🔍 Checking Redis connection..."
-if ! redis-cli ping > /dev/null 2>&1; then
+if ! python -c "import redis; redis.Redis(host='localhost', port=6379, db=0).ping()" > /dev/null 2>&1; then
     echo "❌ Redis is not running. Please start Redis first:"
     echo "   docker run -d -p 6379:6379 redis:7-alpine"
     echo "   or"

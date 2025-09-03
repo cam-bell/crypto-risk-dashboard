@@ -16,7 +16,7 @@ class EtherscanClient(BaseAPIClient):
     
     async def health_check(self) -> APIResponse:
         """Check Etherscan API health"""
-        params = {"module": "proxy", "action": "eth_blockNumber"}
+        params = {"module": "proxy", "action": "eth_blockNumber", "apikey": self.api_key}
         return await self._make_request("GET", "", params=params)
     
     async def get_account_balance(self, address: str) -> APIResponse:
@@ -25,7 +25,8 @@ class EtherscanClient(BaseAPIClient):
             "module": "account",
             "action": "balance",
             "address": address,
-            "tag": "latest"
+            "tag": "latest",
+            "apikey": self.api_key
         }
         return await self._make_request("GET", "", params=params)
     
@@ -46,7 +47,8 @@ class EtherscanClient(BaseAPIClient):
             "endblock": end_block,
             "page": page,
             "offset": offset,
-            "sort": "desc"
+            "sort": "desc",
+            "apikey": self.api_key
         }
         return await self._make_request("GET", "", params=params)
     

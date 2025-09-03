@@ -86,11 +86,8 @@ def setup_periodic_tasks(sender, **kwargs):
     logger.info("Setting up periodic tasks")
     
     # Add custom periodic tasks if needed
-    sender.add_periodic_task(
-        api_config.price_refresh_interval,
-        fetch_crypto_prices.s(),
-        name="fetch-crypto-prices-custom"
-    )
+    # Note: fetch_crypto_prices is imported in tasks.py
+    pass
 
 
 def get_celery_app():

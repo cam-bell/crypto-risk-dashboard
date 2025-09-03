@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from typing import List, Dict, Any
-from celery import current_task
+from celery import shared_task
 from app.api_clients.coingecko_client import CoinGeckoClient
 from app.api_clients.etherscan_client import EtherscanClient
 from app.api_clients.alphavantage_client import AlphaVantageClient
@@ -11,7 +11,7 @@ from app.core.api_config import api_config
 logger = logging.getLogger(__name__)
 
 
-@current_task.task
+@shared_task
 def fetch_crypto_prices():
     """Fetch cryptocurrency prices from CoinGecko"""
     try:
@@ -67,7 +67,7 @@ async def _fetch_crypto_prices_async(crypto_ids: List[str]) -> List[Dict[str, An
             return []
 
 
-@current_task.task
+@shared_task
 def fetch_market_data():
     """Fetch market data from multiple sources"""
     try:
@@ -119,7 +119,7 @@ async def _fetch_market_data_async() -> Dict[str, Any]:
     return results
 
 
-@current_task.task
+@shared_task
 def fetch_wallet_analysis():
     """Fetch wallet analysis data from Etherscan"""
     try:
@@ -187,7 +187,7 @@ async def _fetch_wallet_analysis_async(wallet_addresses: List[str]) -> List[Dict
     return results
 
 
-@current_task.task
+@shared_task
 def cleanup_cache():
     """Clean up expired cache entries and optimize cache"""
     try:
@@ -238,7 +238,7 @@ async def _cleanup_cache_async() -> Dict[str, Any]:
         return {"error": str(e)}
 
 
-@current_task.task
+@shared_task
 def health_check_apis():
     """Check health of all external APIs"""
     try:
@@ -307,7 +307,7 @@ async def _health_check_apis_async() -> Dict[str, Any]:
     return results
 
 
-@current_task.task
+@shared_task
 def fetch_specific_crypto_data(crypto_id: str, data_type: str = "price"):
     """Fetch specific cryptocurrency data"""
     try:

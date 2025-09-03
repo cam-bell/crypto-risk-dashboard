@@ -124,28 +124,31 @@ class CryptoDataIntegrationService:
             results = {}
             
             # Check CoinGecko
-            coingecko_health = await self.coingecko_client.health_check()
-            results["coingecko"] = {
-                "status": "healthy" if coingecko_health.success else "unhealthy",
-                "response_time": coingecko_health.status_code,
-                "error": coingecko_health.error
-            }
+            async with self.coingecko_client as client:
+                coingecko_health = await client.health_check()
+                results["coingecko"] = {
+                    "status": "healthy" if coingecko_health.success else "unhealthy",
+                    "response_time": coingecko_health.status_code,
+                    "error": coingecko_health.error
+                }
             
             # Check Etherscan
-            etherscan_health = await self.etherscan_client.health_check()
-            results["etherscan"] = {
-                "status": "healthy" if etherscan_health.success else "unhealthy",
-                "response_time": etherscan_health.status_code,
-                "error": etherscan_health.error
-            }
+            async with self.etherscan_client as client:
+                etherscan_health = await client.health_check()
+                results["etherscan"] = {
+                    "status": "healthy" if etherscan_health.success else "unhealthy",
+                    "response_time": etherscan_health.status_code,
+                    "error": etherscan_health.error
+                }
             
             # Check Alpha Vantage
-            alphavantage_health = await self.alphavantage_client.health_check()
-            results["alphavantage"] = {
-                "status": "healthy" if alphavantage_health.success else "unhealthy",
-                "response_time": alphavantage_health.status_code,
-                "error": alphavantage_health.error
-            }
+            async with self.alphavantage_client as client:
+                alphavantage_health = await client.health_check()
+                results["alphavantage"] = {
+                    "status": "healthy" if alphavantage_health.success else "unhealthy",
+                    "response_time": alphavantage_health.status_code,
+                    "error": alphavantage_health.error
+                }
             
             return {
                 "success": True,
@@ -164,20 +167,21 @@ class CryptoDataIntegrationService:
     async def _get_coingecko_data(self, crypto_ids: List[str]) -> Optional[Dict[str, Any]]:
         """Get data from CoinGecko"""
         try:
-            # Get prices
-            price_response = await self.coingecko_client.get_coin_price(crypto_ids, ["usd"])
-            if not price_response.success:
-                return None
-            
-            # Get market data
-            market_response = await self.coingecko_client.get_coin_market_data(crypto_ids)
-            if not market_response.success:
-                return None
-            
-            return {
-                "prices": price_response.data,
-                "market_data": market_response.data
-            }
+            async with self.coingecko_client as client:
+                # Get prices
+                price_response = await client.get_coin_price(crypto_ids, ["usd"])
+                if not price_response.success:
+                    return None
+                
+                # Get market data
+                market_response = await client.get_coin_market_data(crypto_ids)
+                if not market_response.success:
+                    return None
+                
+                return {
+                    "prices": price_response.data,
+                    "market_data": market_response.data
+                }
             
         except Exception as e:
             logger.error(f"Error getting CoinGecko data: {e}")
@@ -188,23 +192,24 @@ class CryptoDataIntegrationService:
         try:
             results = {}
             
-            for crypto_id in crypto_ids[:5]:  # Limit to 5 due to rate limits
-                try:
-                    # Get daily data
-                    daily_response = await self.alphavantage_client.get_crypto_daily(crypto_id)
-                    if daily_response.success:
-                        results[crypto_id] = {"daily": daily_response.data}
-                    
-                    # Get intraday data
-                    intraday_response = await self.alphavantage_client.get_crypto_intraday(crypto_id)
-                    if intraday_response.success:
-                        if crypto_id not in results:
-                            results[crypto_id] = {}
-                        results[crypto_id]["intraday"] = intraday_response.data
+            async with self.alphavantage_client as client:
+                for crypto_id in crypto_ids[:5]:  # Limit to 5 due to rate limits
+                    try:
+                        # Get daily data
+                        daily_response = await client.get_crypto_daily(crypto_id)
+                        if daily_response.success:
+                            results[crypto_id] = {"daily": daily_response.data}
                         
-                except Exception as e:
-                    logger.warning(f"Error getting Alpha Vantage data for {crypto_id}: {e}")
-                    continue
+                        # Get intraday data
+                        intraday_response = await client.get_crypto_intraday(crypto_id)
+                        if intraday_response.success:
+                            if crypto_id not in results:
+                                results[crypto_id] = {}
+                            results[crypto_id]["intraday"] = intraday_response.data
+                            
+                    except Exception as e:
+                        logger.warning(f"Error getting Alpha Vantage data for {crypto_id}: {e}")
+                        continue
             
             return results if results else None
             

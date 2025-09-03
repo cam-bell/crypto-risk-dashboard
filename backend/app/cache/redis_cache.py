@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import Any, Optional
-import aioredis
+import redis.asyncio as redis
 from app.core.api_config import api_config
 
 logger = logging.getLogger(__name__)
@@ -11,14 +11,14 @@ class RedisCache:
     """Redis caching layer for API responses"""
     
     def __init__(self):
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: Optional[redis.Redis] = None
         self.default_ttl = api_config.cache_ttl
         self.max_size = api_config.cache_max_size
     
     async def connect(self):
         """Connect to Redis"""
         try:
-            self.redis = await aioredis.from_url(
+            self.redis = redis.from_url(
                 api_config.redis_url,
                 db=api_config.redis_db,
                 password=api_config.redis_password,

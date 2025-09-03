@@ -51,8 +51,9 @@ class APIConfig(BaseSettings):
     fallback_timeout: int = 10
     
     class Config:
-        env_file = ".env"
-        env_prefix = "API_"
+        env_file = "../.env"
+        env_prefix = ""
+        extra = "ignore"
 
 
 # Global API config instance
