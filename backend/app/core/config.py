@@ -19,7 +19,12 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Crypto Risk Dashboard API"
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: str = "http://localhost:3000"
+    
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Convert comma-separated CORS_ORIGINS string to list"""
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 
     # Database - Simple, reliable configuration
     DATABASE_URL: str = "postgresql://postgres:password@127.0.0.1:5432/crypto_risk_db"

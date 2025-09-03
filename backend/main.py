@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from app.api.v1.api import api_router
 from app.db.session import engine
 from app.db.base import Base
+from app.core.config import settings
 
 # Load environment variables
 load_dotenv()
@@ -52,7 +53,7 @@ app = FastAPI(
 # Add middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
