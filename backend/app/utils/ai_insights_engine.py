@@ -12,7 +12,7 @@ from enum import Enum
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
-from langchain.cache import RedisCache
+from langchain_community.cache import RedisCache
 from langchain.globals import set_llm_cache
 from pydantic import BaseModel, Field
 
@@ -98,7 +98,9 @@ class AIInsightsEngine:
         # Setup Redis cache for LLM responses
         if settings.REDIS_URL:
             try:
-                redis_cache = RedisCache.from_url(settings.REDIS_URL)
+                import redis
+                redis_client = redis.from_url(settings.REDIS_URL)
+                redis_cache = RedisCache(redis_client)
                 set_llm_cache(redis_cache)
                 logger.info("Redis cache enabled for AI insights")
             except Exception as e:
