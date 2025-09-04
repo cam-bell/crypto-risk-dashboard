@@ -4,12 +4,28 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useThemeContext } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/Button";
-import { Menu, X, Sun, Moon, Monitor, BarChart3, Wallet } from "lucide-react";
+import {
+  Menu,
+  X,
+  Sun,
+  Moon,
+  Monitor,
+  BarChart3,
+  Wallet,
+  TrendingUp,
+  Brain,
+  Bell,
+  Shield,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
+  { name: "Markets", href: "/markets", icon: TrendingUp },
   { name: "Portfolios", href: "/portfolios", icon: Wallet },
+  { name: "Risk Analysis", href: "/risk-analysis", icon: Shield },
+  { name: "Insights", href: "/insights", icon: Brain },
+  { name: "Alerts", href: "/alerts", icon: Bell },
 ];
 
 export function Header() {

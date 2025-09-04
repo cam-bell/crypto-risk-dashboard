@@ -216,8 +216,15 @@ npm run start
 
 ### Environment Variables
 
-- `NEXT_PUBLIC_API_URL` - Backend API endpoint
+- `NEXT_PUBLIC_API_BASE_URL` - Primary backend API endpoint (preferred)
+- `NEXT_PUBLIC_API_URL` - Fallback backend API endpoint (for backward compatibility)
 - `NEXT_PUBLIC_APP_ENV` - Environment (development/production)
+
+#### API Configuration Notes
+
+- The API client will use `NEXT_PUBLIC_API_BASE_URL` if available, otherwise fall back to `NEXT_PUBLIC_API_URL`
+- Default fallback is `http://localhost:8000` if neither environment variable is set
+- For production deployments, set `NEXT_PUBLIC_API_BASE_URL` to your deployed FastAPI backend URL
 
 ### Docker Support
 
