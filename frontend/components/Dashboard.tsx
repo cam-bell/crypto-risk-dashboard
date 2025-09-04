@@ -1,243 +1,461 @@
 "use client";
 
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { useState, useEffect } from "react";
+import { usePortfolios } from "@/hooks/usePortfolios";
+import { useCryptoAssets } from "@/hooks/useCryptoAssets";
+import { useRiskMetrics } from "@/hooks/useRiskMetrics";
+import { ConnectionStatus } from "./ConnectionStatus";
+import { PortfolioOverview } from "./PortfolioOverview";
+import { RiskMetrics } from "./RiskMetrics";
+import { AIInsights } from "./AIInsights";
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  AlertTriangle,
+  Shield,
+  Activity,
+  RefreshCw,
   BarChart3,
   PieChart,
-  Activity,
-  Target,
+  LineChart,
+  AlertTriangle,
 } from "lucide-react";
-import { usePortfolios } from "@/hooks/usePortfolios";
-import { useMarketOverview } from "@/hooks/useCryptoAssets";
-import { formatCurrency, formatPercentage, getChangeColor } from "@/lib/utils";
-import { PortfolioOverview } from "./PortfolioOverview";
-import { RiskMetrics } from "./RiskMetrics";
-import { AIInsights } from "./AIInsights";
 
 export function Dashboard() {
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(
+    null
+  );
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(30); // seconds
+
   const {
-    data: portfolios,
+    portfolios,
     isLoading: portfoliosLoading,
-    error: portfoliosError,
+    getPortfolioStats,
+    getTopPerformers,
+    getHighestRisk,
+    realTimeData: portfolioRealTime,
+    subscribeToPortfolio,
+    unsubscribeFromPortfolio,
   } = usePortfolios();
-  const { data: marketData, isLoading: marketLoading } = useMarketOverview();
 
-  const selectedPortfolio = portfolios?.[0]; // For now, just use the first portfolio
-  const totalValue = selectedPortfolio?.total_value || 0;
-  const totalPnl = selectedPortfolio?.total_pnl || 0;
-  const totalPnlPercentage = selectedPortfolio?.total_pnl_percentage || 0;
-  const riskScore = selectedPortfolio?.risk_score || 0;
+  const {
+    assets,
+    isLoading: assetsLoading,
+    getTopGainers,
+    getTopLosers,
+    getHighestVolume,
+    getMarketSentiment,
+    getPriceChangeStats,
+    realTimeData: assetsRealTime,
+    subscribeToAssets,
+    unsubscribeFromAssets,
+  } = useCryptoAssets();
 
-  const getRiskLevel = (score: number) => {
-    if (score <= 0.3)
-      return { level: "Low", color: "text-green-600 dark:text-green-400" };
-    if (score <= 0.7)
-      return { level: "Medium", color: "text-yellow-600 dark:text-yellow-400" };
-    return { level: "High", color: "text-red-600 dark:text-red-400" };
+  const {
+    useRiskMetrics: usePortfolioRiskMetrics,
+    calculateRiskScore,
+    getRiskLevel,
+    getRiskSummary,
+    subscribeToRiskMetrics,
+    unsubscribeFromRiskMetrics,
+  } = useRiskMetrics();
+
+  // Auto-select first portfolio if available
+  useEffect(() => {
+    if (portfolios.length > 0 && !selectedPortfolioId) {
+      setSelectedPortfolioId(portfolios[0].id);
+    }
+  }, [portfolios, selectedPortfolioId]);
+
+  // Subscribe to real-time updates for selected portfolio
+  useEffect(() => {
+    if (selectedPortfolioId) {
+      subscribeToPortfolio(selectedPortfolioId);
+      subscribeToRiskMetrics(selectedPortfolioId);
+
+      // Subscribe to price updates for portfolio assets
+      const portfolio = portfolios.find((p) => p.id === selectedPortfolioId);
+      if (portfolio) {
+        const assetIds = portfolio.holdings.map((h) => h.asset_id);
+        subscribeToAssets(assetIds);
+      }
+    }
+
+    return () => {
+      if (selectedPortfolioId) {
+        unsubscribeFromPortfolio(selectedPortfolioId);
+        unsubscribeFromRiskMetrics(selectedPortfolioId);
+
+        const portfolio = portfolios.find((p) => p.id === selectedPortfolioId);
+        if (portfolio) {
+          const assetIds = portfolio.holdings.map((h) => h.asset_id);
+          unsubscribeFromAssets(assetIds);
+        }
+      }
+    };
+  }, [selectedPortfolioId, portfolios]);
+
+  // Auto-refresh functionality
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      // Trigger refetch of key data
+      window.dispatchEvent(new CustomEvent("dashboard-refresh"));
+    }, refreshInterval * 1000);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval]);
+
+  const portfolioStats = getPortfolioStats();
+  const topPerformers = getTopPerformers(5);
+  const highestRisk = getHighestRisk(5);
+  const topGainers = getTopGainers(5);
+  const topLosers = getTopLosers(5);
+  const marketSentiment = getMarketSentiment();
+  const priceChangeStats = getPriceChangeStats();
+
+  const selectedPortfolio = portfolios.find(
+    (p) => p.id === selectedPortfolioId
+  );
+  const riskMetrics = usePortfolioRiskMetrics(selectedPortfolioId || "");
+  const riskSummary = riskMetrics.data
+    ? getRiskSummary(riskMetrics.data)
+    : null;
+
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment) {
+      case "bullish":
+        return "text-green-500";
+      case "bearish":
+        return "text-red-500";
+      default:
+        return "text-gray-500";
+    }
   };
 
-  const riskLevel = getRiskLevel(riskScore);
+  const getSentimentIcon = (sentiment: string) => {
+    switch (sentiment) {
+      case "bullish":
+        return <TrendingUp className="w-4 h-4" />;
+      case "bearish":
+        return <TrendingDown className="w-4 h-4" />;
+      default:
+        return <BarChart3 className="w-4 h-4" />;
+    }
+  };
 
-  if (portfoliosLoading) {
+  if (portfoliosLoading || assetsLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (portfoliosError) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">
-            Error loading portfolios
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            {portfoliosError.message}
-          </p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-lg text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Monitor your crypto portfolio performance and risk metrics
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
-          <Button>
-            <Target className="h-4 w-4 mr-2" />
-            Add Asset
-          </Button>
-        </div>
-      </div>
-
-      {/* Key metrics grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Total Portfolio Value */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(totalValue)}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header with Connection Status */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Crypto Risk Dashboard
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Real-time portfolio monitoring and risk analysis
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {portfolios?.length || 0} portfolio
-              {portfolios?.length !== 1 ? "s" : ""}
-            </p>
-          </CardContent>
-        </Card>
 
-        {/* Total P&L */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total P&L</CardTitle>
-            {totalPnl >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-green-600" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-red-600" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${getChangeColor(totalPnlPercentage)}`}
-            >
-              {formatCurrency(totalPnl)}
+            <div className="flex items-center space-x-4">
+              <ConnectionStatus showDetails={true} />
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="auto-refresh"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <label
+                  htmlFor="auto-refresh"
+                  className="text-sm text-gray-600 dark:text-gray-400"
+                >
+                  Auto-refresh
+                </label>
+              </div>
+
+              {autoRefresh && (
+                <select
+                  value={refreshInterval}
+                  onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                  className="text-sm border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value={15}>15s</option>
+                  <option value={30}>30s</option>
+                  <option value={60}>1m</option>
+                  <option value={300}>5m</option>
+                </select>
+              )}
             </div>
-            <p className={`text-xs ${getChangeColor(totalPnlPercentage)}`}>
-              {totalPnl >= 0 ? "+" : ""}
-              {formatPercentage(totalPnlPercentage)}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Risk Score */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Risk Score</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${riskLevel.color}`}>
-              {formatPercentage(riskScore * 100, 1)}
-            </div>
-            <p className={`text-xs ${riskLevel.color}`}>
-              {riskLevel.level} Risk
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Market Overview */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Market Cap</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {marketData
-                ? `$${(marketData.total_market_cap / 1e12).toFixed(1)}T`
-                : "--"}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {marketData
-                ? `${marketData.top_gainers?.length || 0} assets tracked`
-                : "Loading..."}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main content grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Portfolio Overview */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <PieChart className="h-5 w-5 mr-2" />
-              Portfolio Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PortfolioOverview portfolio={selectedPortfolio} />
-          </CardContent>
-        </Card>
-
-        {/* Risk Metrics */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart3 className="h-5 w-5 mr-2" />
-              Risk Metrics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RiskMetrics portfolioId={selectedPortfolio?.id} />
-          </CardContent>
-        </Card>
-
-        {/* AI Insights */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Target className="h-5 w-5 mr-2" />
-              AI Insights
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AIInsights portfolioId={selectedPortfolio?.id} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Rebalance Portfolio
-            </Button>
-            <Button variant="outline" size="sm">
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Set Risk Alerts
-            </Button>
-            <Button variant="outline" size="sm">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Generate Report
-            </Button>
-            <Button variant="outline" size="sm">
-              <Target className="h-4 w-4 mr-2" />
-              Add New Asset
-            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Portfolio Selection */}
+        <div className="mb-8">
+          <label
+            htmlFor="portfolio-select"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Select Portfolio
+          </label>
+          <select
+            id="portfolio-select"
+            value={selectedPortfolioId || ""}
+            onChange={(e) => setSelectedPortfolioId(e.target.value)}
+            className="w-full max-w-xs border border-gray-300 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            <option value="">Choose a portfolio</option>
+            {portfolios.map((portfolio) => (
+              <option key={portfolio.id} value={portfolio.id}>
+                {portfolio.name} (${portfolio.total_value.toLocaleString()})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Key Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Portfolio Value */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Total Value
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  ${portfolioStats?.totalValue.toLocaleString() || "0"}
+                </p>
+              </div>
+            </div>
+            {portfolioStats && (
+              <div className="mt-4 flex items-center text-sm">
+                {portfolioStats.totalPnl >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
+                )}
+                <span
+                  className={
+                    portfolioStats.totalPnl >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }
+                >
+                  {portfolioStats.totalPnl >= 0 ? "+" : ""}
+                  {portfolioStats.totalPnlPercentage.toFixed(2)}%
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Risk Score */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                <Shield className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Risk Score
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {riskSummary?.riskScore.toFixed(1) || "N/A"}
+                </p>
+              </div>
+            </div>
+            {riskSummary && (
+              <div className="mt-4">
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    riskSummary.riskLevel === "low"
+                      ? "bg-green-100 text-green-800"
+                      : riskSummary.riskLevel === "medium"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : riskSummary.riskLevel === "high"
+                          ? "bg-orange-100 text-orange-800"
+                          : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {riskSummary.riskLevel.toUpperCase()}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Market Sentiment */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                <Activity className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Market Sentiment
+                </p>
+                <div className="flex items-center mt-1">
+                  {getSentimentIcon(marketSentiment)}
+                  <span
+                    className={`ml-2 text-lg font-bold ${getSentimentColor(marketSentiment)}`}
+                  >
+                    {marketSentiment.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {priceChangeStats && (
+              <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                {priceChangeStats.gainers} gainers, {priceChangeStats.losers}{" "}
+                losers
+              </div>
+            )}
+          </div>
+
+          {/* Active Alerts */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Active Alerts
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {riskSummary?.alertCount || 0}
+                </p>
+              </div>
+            </div>
+            {riskSummary && riskSummary.criticalAlerts > 0 && (
+              <div className="mt-4">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  {riskSummary.criticalAlerts} Critical
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Portfolio Overview */}
+          <div className="lg:col-span-2">
+            {selectedPortfolio && (
+              <PortfolioOverview
+                portfolio={selectedPortfolio}
+                realTimeData={portfolioRealTime}
+              />
+            )}
+          </div>
+
+          {/* Right Column - Risk Metrics & Insights */}
+          <div className="space-y-8">
+            {selectedPortfolioId && (
+              <>
+                <RiskMetrics
+                  portfolioId={selectedPortfolioId}
+                  realTimeData={portfolioRealTime}
+                />
+
+                <AIInsights
+                  portfolioId={selectedPortfolioId}
+                  realTimeData={portfolioRealTime}
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Market Overview Section */}
+        <div className="mt-12">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+            Market Overview
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Top Gainers */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+                <TrendingUp className="w-5 h-5 text-green-500 mr-2" />
+                Top Gainers
+              </h3>
+              <div className="space-y-3">
+                {topGainers.map((asset) => (
+                  <div
+                    key={asset.id}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <img
+                        src={asset.image}
+                        alt={asset.name}
+                        className="w-6 h-6 rounded-full mr-3"
+                      />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {asset.symbol}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium text-green-600">
+                      +{asset.price_change_percentage_24h.toFixed(2)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top Losers */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+                <TrendingDown className="w-5 h-5 text-red-500 mr-2" />
+                Top Losers
+              </h3>
+              <div className="space-y-3">
+                {topLosers.map((asset) => (
+                  <div
+                    key={asset.id}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <img
+                        src={asset.image}
+                        alt={asset.name}
+                        className="w-6 h-6 rounded-full mr-3"
+                      />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {asset.symbol}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium text-red-600">
+                      {asset.price_change_percentage_24h.toFixed(2)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
