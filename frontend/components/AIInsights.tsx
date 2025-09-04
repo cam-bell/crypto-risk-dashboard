@@ -1,207 +1,410 @@
-'use client'
+"use client";
 
-import { Brain, TrendingUp, AlertTriangle, Lightbulb, RefreshCw } from 'lucide-react'
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import {
+  Brain,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  RefreshCw,
+  Lightbulb,
+  AlertTriangle,
+  Target,
+  Calendar,
+  BarChart3,
+} from "lucide-react";
+import { useAIInsights, useGenerateAIInsight } from "@/hooks/useAIInsights";
+import { AIInsight } from "@/types";
+import { formatPercentage } from "@/lib/utils";
 
-export function AIInsights() {
-  // Sample AI insights - replace with real API calls
-  const aiInsights = {
-    lastUpdated: '2024-12-01T10:30:00Z',
-    portfolioHealth: 'Good',
-    riskTrend: 'Decreasing',
-    insights: [
-      {
-        id: 1,
-        type: 'risk',
-        title: 'Portfolio Concentration Risk',
-        description: 'Your portfolio shows moderate concentration risk with 40% allocation to Bitcoin. Consider diversifying into other asset classes.',
-        impact: 'Medium',
-        confidence: 85,
-        recommendations: [
-          'Reduce BTC allocation to 25-30%',
-          'Add DeFi tokens for diversification',
-          'Consider stablecoin allocation for stability'
-        ]
-      },
-      {
-        id: 2,
-        type: 'opportunity',
-        title: 'Market Timing Opportunity',
-        description: 'Current market conditions suggest good entry points for Ethereum and Layer 2 tokens.',
-        impact: 'High',
-        confidence: 78,
-        recommendations: [
-          'Consider increasing ETH position',
-          'Look into Polygon (MATIC) and Arbitrum',
-          'Dollar-cost average over next 2 weeks'
-        ]
-      },
-      {
-        id: 3,
-        type: 'warning',
-        title: 'Correlation Risk Alert',
-        description: 'High correlation detected between your major holdings (BTC, ETH, ADA). This increases portfolio risk.',
-        impact: 'High',
-        confidence: 92,
-        recommendations: [
-          'Add uncorrelated assets (gold, commodities)',
-          'Consider inverse correlation strategies',
-          'Review allocation strategy quarterly'
-        ]
-      }
-    ]
+interface AIInsightsProps {
+  portfolioId?: string;
+}
+
+export function AIInsights({ portfolioId }: AIInsightsProps) {
+  const [selectedInsight, setSelectedInsight] = useState<AIInsight | null>(
+    null
+  );
+  const {
+    data: insights,
+    isLoading,
+    error,
+    refetch,
+  } = useAIInsights(portfolioId || "");
+  const { mutate: generateInsight, isPending: isGenerating } =
+    useGenerateAIInsight();
+
+  if (!portfolioId) {
+    return (
+      <div className="text-center py-8">
+        <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-semibold mb-2">No Portfolio Selected</h3>
+        <p className="text-muted-foreground">
+          Please select a portfolio to view AI insights
+        </p>
+      </div>
+    );
   }
 
-  const getInsightIcon = (type: string) => {
-    switch (type) {
-      case 'risk': return <AlertTriangle className="h-5 w-5 text-red-500" />
-      case 'opportunity': return <TrendingUp className="h-5 w-5 text-green-500" />
-      case 'warning': return <AlertTriangle className="h-5 w-5 text-yellow-500" />
-      default: return <Lightbulb className="h-5 w-5 text-blue-500" />
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+        <h3 className="text-lg font-semibold mb-2">
+          Error loading AI insights
+        </h3>
+        <p className="text-muted-foreground mb-4">{error.message}</p>
+        <Button onClick={() => refetch()} size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  const latestInsight = insights?.[0];
+  const hasInsights = insights && insights.length > 0;
+
+  const getSentimentIcon = (sentiment: string) => {
+    switch (sentiment.toLowerCase()) {
+      case "bullish":
+        return <TrendingUp className="h-5 w-5 text-green-600" />;
+      case "bearish":
+        return <TrendingDown className="h-5 w-5 text-red-600" />;
+      default:
+        return <Minus className="h-5 w-5 text-gray-600" />;
     }
-  }
+  };
 
-  const getImpactColor = (impact: string) => {
-    switch (impact.toLowerCase()) {
-      case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-      case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment.toLowerCase()) {
+      case "bullish":
+        return "text-green-600 dark:text-green-400";
+      case "bearish":
+        return "text-red-600 dark:text-red-400";
+      default:
+        return "text-gray-600 dark:text-gray-400";
     }
-  }
+  };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+  const getConfidenceColor = (score: number) => {
+    if (score >= 0.8) return "text-green-600 dark:text-green-400";
+    if (score >= 0.6) return "text-yellow-600 dark:text-yellow-400";
+    return "text-red-600 dark:text-red-400";
+  };
+
+  const handleGenerateInsight = () => {
+    if (portfolioId) {
+      generateInsight(portfolioId);
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Header with generate button */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Brain className="h-8 w-8 text-purple-600" />
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            AI Insights
-          </h2>
+        <div className="flex items-center space-x-2">
+          <Brain className="h-5 w-5 text-primary" />
+          <span className="font-medium">AI Portfolio Analysis</span>
         </div>
-        <button className="btn-primary flex items-center space-x-2">
-          <RefreshCw className="h-4 w-4" />
-          <span>Generate New Insights</span>
-        </button>
+        <Button
+          onClick={handleGenerateInsight}
+          disabled={isGenerating}
+          size="sm"
+        >
+          {isGenerating ? (
+            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Lightbulb className="h-4 w-4 mr-2" />
+          )}
+          {isGenerating ? "Generating..." : "Generate Insight"}
+        </Button>
       </div>
 
-      {/* Portfolio Health Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Portfolio Health
-              </p>
-              <p className="text-2xl font-bold text-green-600">
-                {aiInsights.portfolioHealth}
-              </p>
-            </div>
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Risk Trend
-              </p>
-              <p className="text-2xl font-bold text-green-600">
-                {aiInsights.riskTrend}
-              </p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Last Updated
-              </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatDate(aiInsights.lastUpdated)}
-              </p>
-            </div>
-            <RefreshCw className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
-      </div>
-
-      {/* AI Insights List */}
-      <div className="space-y-6">
-        {aiInsights.insights.map((insight) => (
-          <div key={insight.id} className="card">
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0">
-                {getInsightIcon(insight.type)}
-              </div>
-              
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {insight.title}
-                  </h3>
+      {!hasInsights ? (
+        <Card>
+          <CardContent className="text-center py-8">
+            <Lightbulb className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              No AI Insights Available
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              Generate your first AI-powered portfolio analysis to get started
+            </p>
+            <Button onClick={handleGenerateInsight} disabled={isGenerating}>
+              {isGenerating ? "Generating..." : "Generate First Insight"}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Latest insight summary */}
+          {latestInsight && (
+            <Card
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => setSelectedInsight(latestInsight)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center space-x-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    <span>{latestInsight.title}</span>
+                  </CardTitle>
                   <div className="flex items-center space-x-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getImpactColor(insight.impact)}`}>
-                      {insight.impact} Impact
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {insight.confidence}% confidence
+                    {getSentimentIcon(latestInsight.market_sentiment)}
+                    <span
+                      className={`text-sm font-medium ${getSentimentColor(latestInsight.market_sentiment)}`}
+                    >
+                      {latestInsight.market_sentiment}
                     </span>
                   </div>
                 </div>
-                
-                <p className="text-gray-700 dark:text-gray-300 mb-4">
-                  {insight.description}
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  {latestInsight.summary}
                 </p>
-                
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="text-center">
+                    <div
+                      className={`text-2xl font-bold ${getConfidenceColor(latestInsight.confidence_score)}`}
+                    >
+                      {formatPercentage(latestInsight.confidence_score * 100)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Confidence</p>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {latestInsight.recommendations?.length || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Recommendations
+                    </p>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {latestInsight.risk_factors?.length || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Risk Factors
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>
+                      Generated{" "}
+                      {new Date(
+                        latestInsight.generated_at
+                      ).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    View Details
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Previous insights */}
+          {insights && insights.length > 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Previous Insights</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {insights.slice(1, 4).map((insight) => (
+                    <div
+                      key={insight.id}
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                      onClick={() => setSelectedInsight(insight)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            insight.market_sentiment === "bullish"
+                              ? "bg-green-500"
+                              : insight.market_sentiment === "bearish"
+                                ? "bg-red-500"
+                                : "bg-gray-500"
+                          }`}
+                        />
+                        <div>
+                          <p className="font-medium text-sm">{insight.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(
+                              insight.generated_at
+                            ).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span
+                          className={`text-xs font-medium ${getSentimentColor(insight.market_sentiment)}`}
+                        >
+                          {insight.market_sentiment}
+                        </span>
+                        <span
+                          className={`text-xs ${getConfidenceColor(insight.confidence_score)}`}
+                        >
+                          {formatPercentage(insight.confidence_score * 100)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
+      {/* Detailed insight modal */}
+      {selectedInsight && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">{selectedInsight.title}</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedInsight(null)}
+                >
+                  ×
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Summary */}
                 <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                    Recommendations:
-                  </h4>
-                  <ul className="space-y-2">
-                    {insight.recommendations.map((rec, index) => (
-                      <li key={index} className="flex items-start space-x-2">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                        <span className="text-gray-700 dark:text-gray-300">{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <h3 className="text-lg font-semibold mb-2">Summary</h3>
+                  <p className="text-muted-foreground">
+                    {selectedInsight.summary}
+                  </p>
+                </div>
+
+                {/* Detailed Analysis */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">
+                    Detailed Analysis
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {selectedInsight.detailed_analysis}
+                  </p>
+                </div>
+
+                {/* Recommendations */}
+                {selectedInsight.recommendations &&
+                  selectedInsight.recommendations.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Recommendations
+                      </h3>
+                      <div className="space-y-2">
+                        {selectedInsight.recommendations.map((rec, index) => (
+                          <div
+                            key={index}
+                            className="flex items-start space-x-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg"
+                          >
+                            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
+                            <p className="text-sm">{rec}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Risk Factors */}
+                {selectedInsight.risk_factors &&
+                  selectedInsight.risk_factors.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Risk Factors
+                      </h3>
+                      <div className="space-y-2">
+                        {selectedInsight.risk_factors.map((risk, index) => (
+                          <div
+                            key={index}
+                            className="flex items-start space-x-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg"
+                          >
+                            <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0" />
+                            <p className="text-sm">{risk}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Metadata */}
+                <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Market Sentiment
+                    </p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      {getSentimentIcon(selectedInsight.market_sentiment)}
+                      <span
+                        className={`font-medium ${getSentimentColor(selectedInsight.market_sentiment)}`}
+                      >
+                        {selectedInsight.market_sentiment}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Confidence Score
+                    </p>
+                    <p
+                      className={`text-lg font-bold mt-1 ${getConfidenceColor(selectedInsight.confidence_score)}`}
+                    >
+                      {formatPercentage(selectedInsight.confidence_score * 100)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Generated
+                    </p>
+                    <p className="text-sm mt-1">
+                      {new Date(selectedInsight.generated_at).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Expires
+                    </p>
+                    <p className="text-sm mt-1">
+                      {new Date(
+                        selectedInsight.expires_at
+                      ).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* AI Disclaimer */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <Lightbulb className="h-5 w-5 text-blue-600 mt-0.5" />
-          <div>
-            <h4 className="font-medium text-blue-900 dark:text-blue-300">
-              AI-Generated Insights
-            </h4>
-            <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">
-              These insights are generated by AI analysis of your portfolio data and market conditions. 
-              They should not be considered as financial advice. Always do your own research and consider 
-              consulting with a financial advisor before making investment decisions.
-            </p>
-          </div>
         </div>
-      </div>
+      )}
     </div>
-  )
+  );
 }

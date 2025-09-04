@@ -1,9 +1,13 @@
 import { Dashboard } from '@/components/Dashboard'
+import { Header } from '@/components/Header'
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Dashboard />
-    </main>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="container mx-auto">
+        <Dashboard />
+      </main>
+    </div>
   )
 }
