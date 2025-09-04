@@ -5,6 +5,8 @@ Main API router for v1 endpoints
 from fastapi import APIRouter
 
 from app.api.v1.risk_metrics import router as risk_metrics_router
+from app.api.v1.ai_insights import router as ai_insights_router
+from app.api.v1.portfolios import router as portfolios_router
 
 api_router = APIRouter()
 
@@ -15,7 +17,20 @@ api_router.include_router(
     tags=["risk-metrics"]
 )
 
+# Include AI insights router
+api_router.include_router(
+    ai_insights_router,
+    prefix="/ai-insights",
+    tags=["ai-insights"]
+)
+
+# Include portfolios router
+api_router.include_router(
+    portfolios_router,
+    prefix="/portfolios",
+    tags=["portfolios"]
+)
+
 # TODO: Add other API routers here
-# api_router.include_router(portfolios_router, prefix="/portfolios", tags=["portfolios"])
 # api_router.include_router(assets_router, prefix="/assets", tags=["assets"])
 # api_router.include_router(users_router, prefix="/users", tags=["users"])

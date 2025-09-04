@@ -1,5 +1,10 @@
 # API Integration Layer Dependencies
 
+# Web framework and server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=10.4
+
 # HTTP client for API requests
 httpx>=0.25.0
 requests>=2.31.0
@@ -41,6 +46,12 @@ pytz>=2023.3
 
 # Logging and monitoring
 structlog>=23.2.0
+
+# AI and LangChain integration
+langchain>=0.1.0
+langchain-openai>=0.0.5
+langchain-community>=0.0.10
+openai>=1.0.0
 
 # Testing
 pytest>=7.4.3

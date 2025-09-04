@@ -5,12 +5,14 @@ FastAPI application for portfolio management and risk analysis
 
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 from dotenv import load_dotenv
+import json
+from typing import List
 
 # Import routers
 from app.api.v1.api import api_router
@@ -20,6 +22,32 @@ from app.core.config import settings
 
 # Load environment variables
 load_dotenv()
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except Exception:
+                # Remove disconnected connections
+                self.active_connections.remove(connection)
+
+
+manager = ConnectionManager()
 
 
 @asynccontextmanager
@@ -88,20 +116,59 @@ async def health_check():
     }
 
 
-@app.get("/api/v1/portfolios")
-async def get_portfolios():
-    """Get user portfolios - placeholder endpoint"""
-    return {
-        "portfolios": [
-            {
-                "id": "sample-uuid",
-                "name": "Sample Portfolio",
-                "description": "This is a sample portfolio",
-                "total_value": 50000.0,
-                "created_at": "2024-12-01T00:00:00Z"
-            }
-        ]
-    }
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time updates"""
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Wait for messages from client
+            data = await websocket.receive_text()
+            try:
+                message = json.loads(data)
+                
+                # Handle different message types
+                if message.get("type") == "subscribe":
+                    # Handle subscription
+                    await manager.send_personal_message(
+                        json.dumps({
+                            "type": "subscribed",
+                            "data": message.get("data"),
+                            "timestamp": message.get("timestamp")
+                        }),
+                        websocket
+                    )
+                elif message.get("type") == "heartbeat":
+                    # Respond to heartbeat
+                    await manager.send_personal_message(
+                        json.dumps({
+                            "type": "heartbeat",
+                            "data": {"timestamp": message.get("timestamp")},
+                            "timestamp": message.get("timestamp")
+                        }),
+                        websocket
+                    )
+                else:
+                    # Echo back other messages
+                    await manager.send_personal_message(data, websocket)
+                    
+            except json.JSONDecodeError:
+                await manager.send_personal_message(
+                    json.dumps({
+                        "type": "error",
+                        "data": "Invalid JSON format",
+                        "timestamp": "2024-12-01T00:00:00Z"
+                    }),
+                    websocket
+                )
+                
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        manager.disconnect(websocket)
+
+
 
 
 @app.exception_handler(HTTPException)
