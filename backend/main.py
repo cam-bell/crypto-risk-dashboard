@@ -169,20 +169,6 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-@app.get("/api/v1/portfolios")
-async def get_portfolios():
-    """Get user portfolios - placeholder endpoint"""
-    return {
-        "portfolios": [
-            {
-                "id": "sample-uuid",
-                "name": "Sample Portfolio",
-                "description": "This is a sample portfolio",
-                "total_value": 50000.0,
-                "created_at": "2024-12-01T00:00:00Z"
-            }
-        ]
-    }
 
 
 @app.exception_handler(HTTPException)

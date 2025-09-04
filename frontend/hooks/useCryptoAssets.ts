@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { CryptoAsset, PriceHistory } from "@/types";
 import { useRealTimeData } from "./useRealTimeData";
-import { websocketClient } from "@/lib/websocket";
+// WebSocket removed for now
 import { toast } from "react-hot-toast";
 
 export function useCryptoAssets() {
@@ -250,16 +250,16 @@ export function useCryptoAssets() {
 
   // Subscribe to real-time updates for specific assets
   const subscribeToAssets = (assetIds: string[]) => {
-    // Subscribe to price updates for specific assets
+    // Simulate subscription to price updates for specific assets
     assetIds.forEach((assetId) => {
-      websocketClient.subscribe("price_updates", { asset_id: assetId });
+      console.log(`Subscribed to asset ${assetId}`);
     });
   };
 
-  // Unsubscribe from real-time updates
+  // Unsubscribe from real-time updates (simulated)
   const unsubscribeFromAssets = (assetIds: string[]) => {
     assetIds.forEach((assetId) => {
-      websocketClient.unsubscribe("price_updates", { asset_id: assetId });
+      console.log(`Unsubscribed from asset ${assetId}`);
     });
   };
 

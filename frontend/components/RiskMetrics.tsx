@@ -28,29 +28,18 @@ import { useRiskMetrics } from "@/hooks/useRiskMetrics";
 import { formatPercentage, formatNumber, getRiskColor } from "@/lib/utils";
 
 interface RiskMetricsProps {
-  portfolioId?: string;
+  portfolioId: string;
 }
 
 export function RiskMetrics({ portfolioId }: RiskMetricsProps) {
   const [timeframe, setTimeframe] = useState<"1d" | "1w" | "1m" | "3m">("1w");
+  const riskMetricsHook = useRiskMetrics();
   const {
     data: riskMetrics,
     isLoading,
     error,
     refetch,
-  } = useRiskMetrics(portfolioId || "");
-
-  if (!portfolioId) {
-    return (
-      <div className="text-center py-8">
-        <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No Portfolio Selected</h3>
-        <p className="text-muted-foreground">
-          Please select a portfolio to view risk metrics
-        </p>
-      </div>
-    );
-  }
+  } = riskMetricsHook.useRiskMetrics(portfolioId);
 
   if (isLoading) {
     return (

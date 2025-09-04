@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { PortfolioProvider } from "@/contexts/PortfolioContext";
 import { ThemeProvider as CustomThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "react-hot-toast";
-import { websocketClient } from "@/lib/websocket";
+// WebSocket removed for now
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -15,20 +15,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30 * 1000, // 30 seconds for real-time data
+            staleTime: 30 * 1000, // 30 seconds default
             gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
             retry: (failureCount, error: any) => {
               // Don't retry on 4xx errors
               if (error?.status >= 400 && error?.status < 500) {
                 return false;
               }
-              return failureCount < 3;
+              return failureCount < 2;
             },
             retryDelay: (attemptIndex) =>
-              Math.min(1000 * 2 ** attemptIndex, 30000),
-            refetchOnWindowFocus: true,
+              Math.min(1000 * 2 ** attemptIndex, 10000),
+            refetchOnWindowFocus: false, // Prevent refetch on focus
             refetchOnReconnect: true,
-            refetchOnMount: true,
+            refetchOnMount: false, // Don't refetch on mount if cached data exists
           },
           mutations: {
             retry: 1,
@@ -38,30 +38,48 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
-  // WebSocket connection management
+  // Data refresh management - intelligent invalidation based on data type
   useEffect(() => {
-    const handleConnected = () => {
-      console.log("WebSocket connected");
-      // Invalidate and refetch queries when WebSocket reconnects
-      queryClient.invalidateQueries();
-    };
+    // Price data - refresh every 5 seconds for real-time feel
+    const priceInterval = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: ["prices"],
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["live-prices"],
+        exact: false,
+      });
+    }, 5000);
 
-    const handleDisconnected = () => {
-      console.log("WebSocket disconnected");
-    };
+    // Portfolio and risk data - refresh every 30 seconds
+    const portfolioInterval = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: ["portfolio-live-data"],
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["risk-metrics"],
+        exact: false,
+      });
+    }, 30000);
 
-    const handleError = (error: any) => {
-      console.error("WebSocket error:", error);
-    };
-
-    websocketClient.on("connected", handleConnected);
-    websocketClient.on("disconnected", handleDisconnected);
-    websocketClient.on("error", handleError);
+    // Market data - refresh every 60 seconds
+    const marketInterval = setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: ["market-data"],
+        exact: false,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["market-sentiment"],
+        exact: false,
+      });
+    }, 60000);
 
     return () => {
-      websocketClient.off("connected", handleConnected);
-      websocketClient.off("disconnected", handleDisconnected);
-      websocketClient.off("error", handleError);
+      clearInterval(priceInterval);
+      clearInterval(portfolioInterval);
+      clearInterval(marketInterval);
     };
   }, [queryClient]);
 

@@ -1,13 +1,9 @@
-import { Dashboard } from '@/components/Dashboard'
-import { Header } from '@/components/Header'
+import { DashboardOverview } from "@/components/DashboardOverview";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto">
-        <Dashboard />
-      </main>
-    </div>
-  )
+    <main className="container mx-auto">
+      <DashboardOverview />
+    </main>
+  );
 }

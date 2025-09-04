@@ -20,7 +20,7 @@ import { AIInsight } from "@/types";
 import { formatPercentage } from "@/lib/utils";
 
 interface AIInsightsProps {
-  portfolioId?: string;
+  portfolioId: string;
 }
 
 export function AIInsights({ portfolioId }: AIInsightsProps) {
@@ -32,21 +32,9 @@ export function AIInsights({ portfolioId }: AIInsightsProps) {
     isLoading,
     error,
     refetch,
-  } = useAIInsights(portfolioId || "");
+  } = useAIInsights(portfolioId);
   const { mutate: generateInsight, isPending: isGenerating } =
     useGenerateAIInsight();
-
-  if (!portfolioId) {
-    return (
-      <div className="text-center py-8">
-        <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No Portfolio Selected</h3>
-        <p className="text-muted-foreground">
-          Please select a portfolio to view AI insights
-        </p>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (

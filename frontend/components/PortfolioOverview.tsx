@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { usePortfolios } from "@/hooks/usePortfolios";
 import {
   PieChart,
   BarChart3,
@@ -11,6 +12,7 @@ import {
   Eye,
   EyeOff,
   MoreHorizontal,
+  RefreshCw,
 } from "lucide-react";
 import {
   PieChart as RechartsPieChart,
@@ -29,7 +31,7 @@ import {
 } from "@/lib/utils";
 
 interface PortfolioOverviewProps {
-  portfolio?: Portfolio | null;
+  portfolioId: string;
 }
 
 const COLORS = [
@@ -41,17 +43,29 @@ const COLORS = [
   "#82CA9D",
 ];
 
-export function PortfolioOverview({ portfolio }: PortfolioOverviewProps) {
+export function PortfolioOverview({ portfolioId }: PortfolioOverviewProps) {
   const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
   const [showValues, setShowValues] = useState(true);
+
+  const { portfolios, isLoading } = usePortfolios();
+  const portfolio = portfolios.find((p) => p.id === portfolioId);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+        <p className="text-lg text-gray-600">Loading portfolio...</p>
+      </div>
+    );
+  }
 
   if (!portfolio) {
     return (
       <div className="text-center py-8">
         <PieChart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No Portfolio Selected</h3>
+        <h3 className="text-lg font-semibold mb-2">Portfolio Not Found</h3>
         <p className="text-muted-foreground">
-          Please select a portfolio to view its overview
+          The requested portfolio could not be found
         </p>
       </div>
     );

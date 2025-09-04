@@ -4,28 +4,12 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useThemeContext } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/Button";
-import {
-  Menu,
-  X,
-  Sun,
-  Moon,
-  Monitor,
-  BarChart3,
-  Brain,
-  Bell,
-  Settings,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
+import { Menu, X, Sun, Moon, Monitor, BarChart3, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
-  { name: "Risk Analysis", href: "/risk", icon: TrendingUp },
-  { name: "AI Insights", href: "/insights", icon: Brain },
-  { name: "Portfolio", href: "/portfolio", icon: Wallet },
-  { name: "Alerts", href: "/alerts", icon: Bell },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Portfolios", href: "/portfolios", icon: Wallet },
 ];
 
 export function Header() {
@@ -85,17 +69,6 @@ export function Header() {
               aria-label="Toggle theme"
             >
               {getThemeIcon()}
-            </Button>
-
-            {/* Notifications */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 relative"
-              aria-label="Notifications"
-            >
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-destructive" />
             </Button>
 
             {/* User menu */}

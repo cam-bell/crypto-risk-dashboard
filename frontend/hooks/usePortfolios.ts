@@ -14,7 +14,7 @@ export function usePortfolios() {
     showNotifications: true,
   });
 
-  // Get all portfolios
+  // Get all portfolios - longer cache time since this doesn't change frequently
   const {
     data: portfolios = [],
     isLoading,
@@ -23,9 +23,9 @@ export function usePortfolios() {
   } = useQuery({
     queryKey: ["portfolios"],
     queryFn: apiClient.getPortfolios,
-    staleTime: 30 * 1000, // 30 seconds for real-time updates
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 60 * 1000, // Refetch every minute as fallback
+    staleTime: 5 * 60 * 1000, // 5 minutes for portfolio list
+    gcTime: 15 * 60 * 1000, // 15 minutes
+    refetchInterval: false, // No automatic refetch
   });
 
   // Get single portfolio
@@ -33,19 +33,19 @@ export function usePortfolios() {
     return useQuery({
       queryKey: ["portfolio", id],
       queryFn: () => apiClient.getPortfolio(id),
-      staleTime: 15 * 1000, // 15 seconds for portfolio details
+      staleTime: 2 * 60 * 1000, // 2 minutes for portfolio details
       enabled: !!id,
     });
   };
 
-  // Get portfolio with live data
+  // Get portfolio with live data - shorter cache time for real-time data
   const usePortfolioLiveData = (id: string) => {
     return useQuery({
       queryKey: ["portfolio-live-data", id],
       queryFn: () => apiClient.getPortfolioLiveData(id),
-      staleTime: 10 * 1000, // 10 seconds for live data
+      staleTime: 30 * 1000, // 30 seconds for live data
       enabled: !!id,
-      refetchInterval: 30 * 1000, // Refetch every 30 seconds
+      refetchInterval: 60 * 1000, // Refetch every minute for live data
     });
   };
 
