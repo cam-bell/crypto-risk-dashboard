@@ -12,7 +12,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { apiClient } from "@/lib/api";
+import { getCoinsByCategory, searchCoins } from "@/lib/server-actions";
 import { CryptoAsset } from "@/types";
 
 interface EnhancedCryptoSelectionModalProps {
@@ -221,7 +221,7 @@ export function EnhancedCryptoSelectionModal({
     return recommendations.slice(0, 20); // Limit to 20 recommendations
   };
 
-  // Fetch crypto assets based on category
+  // Fetch crypto assets based on category using server actions
   useEffect(() => {
     if (!isOpen) {
       // Reset state when modal closes
@@ -237,37 +237,17 @@ export function EnhancedCryptoSelectionModal({
       try {
         let assets: CryptoAsset[] = [];
 
-        switch (selectedCategory) {
-          case "top":
-            // Fetch top 100 by market cap
-            assets = await apiClient.getCryptoAssets();
-            // Sort by market cap and take top 100
-            assets = assets
-              .filter((asset) => asset.market_cap > 0)
-              .sort((a, b) => b.market_cap - a.market_cap)
-              .slice(0, 100);
-            break;
-          case "trending":
-            // Fetch assets with high volume/price change
-            assets = await apiClient.getCryptoAssets();
-            assets = assets
-              .filter(
-                (asset) => Math.abs(asset.price_change_percentage_24h) > 5
-              )
-              .sort(
-                (a, b) =>
-                  Math.abs(b.price_change_percentage_24h) -
-                  Math.abs(a.price_change_percentage_24h)
-              )
-              .slice(0, 50);
-            break;
-          case "all":
-            assets = await apiClient.getCryptoAssets();
-            break;
-          default:
-            // For other categories, we'll filter from all assets
-            assets = await apiClient.getCryptoAssets();
-            break;
+        // Use server actions for data fetching
+        if (searchQuery.trim()) {
+          // Search mode
+          assets = (await searchCoins(searchQuery, {
+            perPage: 100,
+          })) as CryptoAsset[];
+        } else {
+          // Category mode
+          assets = (await getCoinsByCategory(selectedCategory as any, {
+            perPage: 100,
+          })) as CryptoAsset[];
         }
 
         // Update with real data if API call succeeds
@@ -284,7 +264,7 @@ export function EnhancedCryptoSelectionModal({
     };
 
     fetchCryptoAssets();
-  }, [isOpen, selectedCategory]);
+  }, [isOpen, selectedCategory, searchQuery]);
 
   // Fallback assets when API fails
   const getFallbackAssets = (): CryptoAsset[] => [

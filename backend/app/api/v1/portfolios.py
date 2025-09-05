@@ -22,6 +22,32 @@ from app.schemas.portfolio import (
 router = APIRouter()
 
 
+def _update_portfolio_totals(db: Session, portfolio_id: str):
+    """Update portfolio totals based on current holdings"""
+    portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+    if not portfolio:
+        return
+    
+    # Get all holdings for this portfolio
+    holdings = db.query(PortfolioHolding).filter(
+        PortfolioHolding.portfolio_id == portfolio_id
+    ).all()
+    
+    # Calculate totals
+    total_invested = sum(h.total_invested_usd for h in holdings)
+    total_value = sum(h.current_value_usd for h in holdings)
+    total_pnl = sum(h.profit_loss_usd for h in holdings)
+    total_pnl_percentage = (total_pnl / total_invested * 100) if total_invested > 0 else 0
+    
+    # Update portfolio
+    portfolio.total_invested_usd = total_invested
+    portfolio.total_value_usd = total_value
+    portfolio.total_profit_loss_usd = total_pnl
+    portfolio.total_profit_loss_percentage = total_pnl_percentage
+    
+    db.commit()
+
+
 @router.get("/", response_model=PortfolioListResponse)
 async def get_portfolios(
     skip: int = Query(0, ge=0, description="Number of portfolios to skip"),
@@ -208,6 +234,9 @@ async def create_portfolio_holding(
     db.commit()
     db.refresh(db_holding)
     
+    # Update portfolio totals
+    _update_portfolio_totals(db, portfolio_id)
+    
     return db_holding
 
 
@@ -249,6 +278,9 @@ async def update_portfolio_holding(
     db.commit()
     db.refresh(db_holding)
     
+    # Update portfolio totals
+    _update_portfolio_totals(db, portfolio_id)
+    
     return db_holding
 
 
@@ -271,5 +303,8 @@ async def delete_portfolio_holding(
     
     db.delete(holding)
     db.commit()
+    
+    # Update portfolio totals
+    _update_portfolio_totals(db, portfolio_id)
     
     return {"message": "Holding deleted successfully"}

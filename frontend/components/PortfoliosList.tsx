@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { usePortfolios } from "@/hooks/usePortfolios";
-import { useRiskMetrics } from "@/hooks/useRiskMetrics";
 import Link from "next/link";
 import { PortfolioCreationModal } from "./PortfolioCreationModal";
 import {
@@ -27,17 +26,21 @@ export function PortfoliosList() {
     getPortfolioStats,
     getTopPerformers,
     getHighestRisk,
+    createPortfolio,
+    isCreating,
   } = usePortfolios();
-
-  const {
-    useRiskMetrics: usePortfolioRiskMetrics,
-    getRiskLevel,
-    getRiskSummary,
-  } = useRiskMetrics();
 
   const portfolioStats = getPortfolioStats();
 
-  const handleCreatePortfolio = (portfolioData: {
+  // Mapping from frontend asset IDs to database UUIDs
+  const assetIdMapping: Record<string, string> = {
+    bitcoin: "93c19608-441b-454c-af58-3d3c3846aa5d",
+    ethereum: "3d79dad5-e930-4a17-a035-878031e68a6a",
+    cardano: "158c9204-1b0e-4b78-8a39-80ba975a5759",
+    ripple: "ripple", // XRP not in database yet
+  };
+
+  const handleCreatePortfolio = async (portfolioData: {
     name: string;
     description: string;
     assets: Array<{
@@ -48,17 +51,63 @@ export function PortfoliosList() {
       average_price: number;
     }>;
   }) => {
-    // For now, we'll just log the portfolio data
-    // In a real app, this would call an API to create the portfolio
-    console.log("Creating portfolio:", portfolioData);
+    try {
+      // Create the portfolio using the API
+      createPortfolio(
+        {
+          name: portfolioData.name,
+          description: portfolioData.description,
+          total_value: 0, // Will be calculated
+          total_cost: 0, // Will be calculated
+          total_pnl: 0, // Will be calculated
+          total_pnl_percentage: 0, // Will be calculated
+          risk_score: 0, // Will be calculated
+          holdings: [], // Will be populated after creating holdings
+        },
+        {
+          onSuccess: async (createdPortfolio) => {
+            // Create holdings for each asset
+            for (const asset of portfolioData.assets) {
+              const cryptoAssetId = assetIdMapping[asset.asset_id];
 
-    // You can implement the actual portfolio creation logic here
-    // For example, call a mutation hook or API endpoint
+              if (!cryptoAssetId) {
+                console.warn(`Asset ID ${asset.asset_id} not found in mapping`);
+                continue;
+              }
 
-    // For demo purposes, we'll show an alert
-    alert(
-      `Portfolio "${portfolioData.name}" created successfully with ${portfolioData.assets.length} assets!`
-    );
+              try {
+                // We need to get the holdings hook for this portfolio
+                // For now, we'll use the API client directly
+                const { apiClient } = await import("@/lib/api");
+                await apiClient.addPortfolioHolding(createdPortfolio.id, {
+                  crypto_asset_id: cryptoAssetId,
+                  quantity: asset.quantity,
+                  average_buy_price_usd: asset.average_price,
+                  notes: `Added via portfolio creation`,
+                });
+              } catch (holdingError) {
+                console.error(
+                  `Error creating holding for ${asset.name}:`,
+                  holdingError
+                );
+              }
+            }
+
+            // Show success message
+            alert(
+              `Portfolio "${portfolioData.name}" created successfully with ${portfolioData.assets.length} assets!`
+            );
+          },
+          onError: (error) => {
+            console.error("Error creating portfolio:", error);
+            alert("Failed to create portfolio. Please try again.");
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Error creating portfolio:", error);
+      alert("Failed to create portfolio. Please try again.");
+    }
   };
 
   const getRiskColor = (riskScore: number) => {
