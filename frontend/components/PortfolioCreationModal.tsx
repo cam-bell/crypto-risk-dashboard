@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { X, Plus, Trash2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { X, Plus, Trash2, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { EnhancedCryptoSelectionModal } from "./EnhancedCryptoSelectionModal";
 
 interface PortfolioCreationModalProps {
   isOpen: boolean;
@@ -18,6 +19,13 @@ interface PortfolioCreationModalProps {
       average_price: number;
     }>;
   }) => void;
+  existingPortfolios?: Array<{
+    holdings: Array<{
+      asset_id: string;
+      symbol: string;
+      name: string;
+    }>;
+  }>;
 }
 
 const PREDEFINED_ASSETS = [
@@ -57,6 +65,7 @@ export function PortfolioCreationModal({
   isOpen,
   onClose,
   onCreatePortfolio,
+  existingPortfolios = [],
 }: PortfolioCreationModalProps) {
   const [portfolioName, setPortfolioName] = useState("");
   const [portfolioDescription, setPortfolioDescription] = useState("");
@@ -69,6 +78,7 @@ export function PortfolioCreationModal({
       average_price: number;
     }>
   >([]);
+  const [showCryptoSelection, setShowCryptoSelection] = useState(false);
 
   const handleAssetToggle = (asset: (typeof PREDEFINED_ASSETS)[0]) => {
     const isSelected = selectedAssets.some(
@@ -112,6 +122,37 @@ export function PortfolioCreationModal({
   const removeAsset = (assetId: string) => {
     setSelectedAssets(selectedAssets.filter((a) => a.asset_id !== assetId));
   };
+
+  const handleCryptoSelection = (
+    assets: Array<{
+      asset_id: string;
+      symbol: string;
+      name: string;
+      quantity: number;
+      average_price: number;
+    }>
+  ) => {
+    setSelectedAssets(assets);
+    setShowCryptoSelection(false);
+  };
+
+  // Extract existing holdings from all portfolios for smart recommendations
+  const existingHoldings = useMemo(() => {
+    const holdings: Array<{ asset_id: string; symbol: string; name: string }> =
+      [];
+    existingPortfolios.forEach((portfolio) => {
+      portfolio.holdings.forEach((holding) => {
+        if (!holdings.find((h) => h.asset_id === holding.asset_id)) {
+          holdings.push({
+            asset_id: holding.asset_id,
+            symbol: holding.symbol,
+            name: holding.name,
+          });
+        }
+      });
+    });
+    return holdings;
+  }, [existingPortfolios]);
 
   const handleCreatePortfolio = () => {
     if (!portfolioName.trim()) {
@@ -195,119 +236,115 @@ export function PortfolioCreationModal({
 
           {/* Asset Selection */}
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              Select Assets
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {PREDEFINED_ASSETS.map((asset) => {
-                const isSelected = selectedAssets.some(
-                  (a) => a.asset_id === asset.asset_id
-                );
-                const selectedAsset = selectedAssets.find(
-                  (a) => a.asset_id === asset.asset_id
-                );
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Select Assets
+              </h3>
+              <Button
+                variant="outline"
+                onClick={() => setShowCryptoSelection(true)}
+                className="flex items-center space-x-2"
+              >
+                <Search className="w-4 h-4" />
+                <span>Browse All Cryptocurrencies</span>
+              </Button>
+            </div>
 
-                return (
-                  <div
-                    key={asset.asset_id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                      isSelected
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                        : "border-gray-200 dark:border-gray-600 hover:border-gray-300"
-                    }`}
-                    onClick={() => handleAssetToggle(asset)}
-                  >
-                    <div className="flex items-center space-x-3 mb-3">
-                      <img
-                        src={asset.image}
-                        alt={asset.name}
-                        className="w-8 h-8 rounded-full"
-                      />
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">
-                          {asset.name}
-                        </h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {asset.symbol}
-                        </p>
+            {selectedAssets.length > 0 ? (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Selected Assets ({selectedAssets.length})
+                </h4>
+                <div className="space-y-3">
+                  {selectedAssets.map((asset) => (
+                    <div
+                      key={asset.asset_id}
+                      className="border border-gray-200 dark:border-gray-600 rounded-lg p-4"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                              {asset.symbol}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 dark:text-white">
+                              {asset.name}
+                            </h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {asset.symbol}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeAsset(asset.asset_id)}
+                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <div className="ml-auto">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleAssetToggle(asset)}
-                          className="rounded border-gray-300"
-                        />
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            Quantity
+                          </label>
+                          <input
+                            type="number"
+                            value={asset.quantity}
+                            onChange={(e) =>
+                              updateAssetQuantity(
+                                asset.asset_id,
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            min="0"
+                            step="0.000001"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            Avg Price ($)
+                          </label>
+                          <input
+                            type="number"
+                            value={asset.average_price}
+                            onChange={(e) =>
+                              updateAssetPrice(
+                                asset.asset_id,
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            min="0"
+                            step="0.01"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        Total Value: $
+                        {(
+                          asset.quantity * asset.average_price
+                        ).toLocaleString()}
                       </div>
                     </div>
-
-                    {isSelected && (
-                      <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                              Quantity
-                            </label>
-                            <input
-                              type="number"
-                              value={selectedAsset?.quantity || 0}
-                              onChange={(e) =>
-                                updateAssetQuantity(
-                                  asset.asset_id,
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              min="0"
-                              step="0.000001"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                              Avg Price ($)
-                            </label>
-                            <input
-                              type="number"
-                              value={
-                                selectedAsset?.average_price ||
-                                asset.current_price
-                              }
-                              onChange={(e) =>
-                                updateAssetPrice(
-                                  asset.asset_id,
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              min="0"
-                              step="0.01"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Total Value: $
-                            {(
-                              (selectedAsset?.quantity || 0) *
-                              (selectedAsset?.average_price || 0)
-                            ).toLocaleString()}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeAsset(asset.asset_id);
-                            }}
-                            className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  No assets selected
+                </h4>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  Click "Browse All Cryptocurrencies" to select from top,
+                  trending, and popular coins
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -325,6 +362,14 @@ export function PortfolioCreationModal({
           </Button>
         </div>
       </div>
+
+      {/* Enhanced Crypto Selection Modal */}
+      <EnhancedCryptoSelectionModal
+        isOpen={showCryptoSelection}
+        onClose={() => setShowCryptoSelection(false)}
+        onSelectAssets={handleCryptoSelection}
+        existingHoldings={existingHoldings}
+      />
     </div>
   );
 }

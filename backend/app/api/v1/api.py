@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.v1.risk_metrics import router as risk_metrics_router
 from app.api.v1.ai_insights import router as ai_insights_router
 from app.api.v1.portfolios import router as portfolios_router
+from app.api.v1.crypto_assets import router as crypto_assets_router
 
 api_router = APIRouter()
 
@@ -31,6 +32,12 @@ api_router.include_router(
     tags=["portfolios"]
 )
 
+# Include crypto assets router
+api_router.include_router(
+    crypto_assets_router,
+    prefix="/crypto-assets",
+    tags=["crypto-assets"]
+)
+
 # TODO: Add other API routers here
-# api_router.include_router(assets_router, prefix="/assets", tags=["assets"])
 # api_router.include_router(users_router, prefix="/users", tags=["users"])
