@@ -124,9 +124,9 @@ describe('useRealTimeData', () => {
 
     const mockPortfolioUpdate = {
       portfolio_id: 'portfolio-1',
-      total_value: 100000,
-      total_pnl: 5000,
-      total_pnl_percentage: 5.0,
+      total_value_usd: 100000,
+      total_profit_loss_usd: 5000,
+      total_profit_loss_percentage: 5.0,
       risk_score: 0.3,
       updated_at: '2024-01-01T00:00:00Z',
     }

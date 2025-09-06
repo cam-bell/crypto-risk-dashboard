@@ -2,45 +2,65 @@ export interface CryptoAsset {
   id: string;
   symbol: string;
   name: string;
-  current_price: number;
-  price_change_24h: number;
-  price_change_percentage_24h: number;
-  market_cap: number;
-  volume_24h: number;
-  circulating_supply: number;
-  total_supply: number;
-  max_supply: number | null;
-  image: string;
-  last_updated: string;
+  coingecko_id?: string;
+  contract_address?: string;
+  blockchain?: string;
+  decimals?: number;
+  market_cap?: number;
+  circulating_supply?: number;
+  total_supply?: number;
+  max_supply?: number;
+  current_price_usd?: number;
+  price_change_24h?: number;
+  price_change_percentage_24h?: number;
+  volume_24h?: number;
+  is_active: boolean;
+  logo_url?: string;
+  description?: string;
+  website_url?: string;
+  whitepaper_url?: string;
+  github_url?: string;
+  twitter_url?: string;
+  reddit_url?: string;
+  telegram_url?: string;
+  discord_url?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface PortfolioHolding {
   id: string;
-  asset_id: string;
-  asset: CryptoAsset;
+  crypto_asset_id: string;
   quantity: number;
-  average_price: number;
-  current_value: number;
-  total_cost: number;
-  unrealized_pnl: number;
-  unrealized_pnl_percentage: number;
-  allocation_percentage: number;
-  risk_score: number;
-  last_updated: string;
+  average_buy_price_usd: number;
+  total_invested_usd: number;
+  current_value_usd: number;
+  profit_loss_usd: number;
+  profit_loss_percentage: number;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+  crypto_asset?: CryptoAsset;
 }
 
 export interface Portfolio {
   id: string;
+  user_id: string;
   name: string;
-  description: string;
-  total_value: number;
-  total_cost: number;
-  total_pnl: number;
-  total_pnl_percentage: number;
-  risk_score: number;
-  holdings: PortfolioHolding[];
+  description?: string;
+  is_default: boolean;
+  is_public: boolean;
+  total_value_usd: number;
+  total_invested_usd: number;
+  total_profit_loss_usd: number;
+  total_profit_loss_percentage: number;
+  risk_score?: number;
+  volatility?: number;
+  sharpe_ratio?: number;
+  max_drawdown?: number;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
+  holdings: PortfolioHolding[];
 }
 
 export interface RiskMetrics {

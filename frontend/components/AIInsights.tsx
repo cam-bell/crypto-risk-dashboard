@@ -36,6 +36,12 @@ export function AIInsights({ portfolioId }: AIInsightsProps) {
   const { mutate: generateInsight, isPending: isGenerating } =
     useGenerateAIInsight();
 
+  const handleGenerateInsight = () => {
+    if (portfolioId) {
+      generateInsight(portfolioId);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -51,11 +57,27 @@ export function AIInsights({ portfolioId }: AIInsightsProps) {
         <h3 className="text-lg font-semibold mb-2">
           Error loading AI insights
         </h3>
-        <p className="text-muted-foreground mb-4">{error.message}</p>
-        <Button onClick={() => refetch()} size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Retry
-        </Button>
+        <p className="text-muted-foreground mb-4">
+          {error.message || "Failed to load AI insights. Please try again."}
+        </p>
+        <div className="flex justify-center space-x-2">
+          <Button onClick={() => refetch()} size="sm" variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+          <Button
+            onClick={handleGenerateInsight}
+            size="sm"
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Lightbulb className="h-4 w-4 mr-2" />
+            )}
+            Generate New Insight
+          </Button>
+        </div>
       </div>
     );
   }
@@ -89,12 +111,6 @@ export function AIInsights({ portfolioId }: AIInsightsProps) {
     if (score >= 0.8) return "text-green-600 dark:text-green-400";
     if (score >= 0.6) return "text-yellow-600 dark:text-yellow-400";
     return "text-red-600 dark:text-red-400";
-  };
-
-  const handleGenerateInsight = () => {
-    if (portfolioId) {
-      generateInsight(portfolioId);
-    }
   };
 
   return (

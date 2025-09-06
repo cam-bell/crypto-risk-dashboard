@@ -75,7 +75,7 @@ export function PortfolioLayout({ children }: PortfolioLayoutProps) {
           </h1>
           <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
             <span>Portfolio ID: {portfolio.id}</span>
-            <span>${portfolio.total_value.toLocaleString()}</span>
+            <span>${portfolio.total_value_usd.toLocaleString()}</span>
             <span>{portfolio.holdings.length} assets</span>
           </div>
         </div>

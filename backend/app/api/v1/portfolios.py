@@ -2,7 +2,8 @@
 FastAPI routes for portfolio management
 """
 
-from typing import List, Optional
+import math
+from typing import List, Optional, Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -20,6 +21,23 @@ from app.schemas.portfolio import (
 )
 
 router = APIRouter()
+
+def clean_nan_values(data: Any) -> Any:
+    """
+    Recursively clean NaN values from data structures to make them JSON serializable
+    """
+    if isinstance(data, dict):
+        return {key: clean_nan_values(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [clean_nan_values(item) for item in data]
+    elif isinstance(data, float):
+        if math.isnan(data):
+            return None
+        elif math.isinf(data):
+            return None
+        return data
+    else:
+        return data
 
 
 def _update_portfolio_totals(db: Session, portfolio_id: str):
@@ -58,7 +76,11 @@ async def get_portfolios(
     """
     Get all portfolios with optional filtering and pagination
     """
-    query = db.query(Portfolio)
+    from sqlalchemy.orm import joinedload
+    
+    query = db.query(Portfolio).options(
+        joinedload(Portfolio.holdings).joinedload(PortfolioHolding.crypto_asset)
+    )
     
     if user_id:
         query = query.filter(Portfolio.user_id == user_id)
@@ -66,12 +88,15 @@ async def get_portfolios(
     total = query.count()
     portfolios = query.offset(skip).limit(limit).all()
     
-    return PortfolioListResponse(
+    response = PortfolioListResponse(
         portfolios=portfolios,
         total=total,
         page=(skip // limit) + 1,
         page_size=limit
     )
+    
+    # Clean NaN values to prevent JSON serialization issues
+    return clean_nan_values(response.dict())
 
 
 @router.get("/{portfolio_id}", response_model=PortfolioResponse)
@@ -82,11 +107,17 @@ async def get_portfolio(
     """
     Get a specific portfolio by ID
     """
-    portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+    from sqlalchemy.orm import joinedload
+    
+    portfolio = db.query(Portfolio).options(
+        joinedload(Portfolio.holdings).joinedload(PortfolioHolding.crypto_asset)
+    ).filter(Portfolio.id == portfolio_id).first()
+    
     if not portfolio:
         raise HTTPException(status_code=404, detail="Portfolio not found")
     
-    return portfolio
+    # Clean NaN values to prevent JSON serialization issues
+    return clean_nan_values(portfolio.__dict__)
 
 
 @router.post("/", response_model=PortfolioResponse)
@@ -112,7 +143,8 @@ async def create_portfolio(
     db.commit()
     db.refresh(db_portfolio)
     
-    return db_portfolio
+    # Clean NaN values to prevent JSON serialization issues
+    return clean_nan_values(db_portfolio.__dict__)
 
 
 @router.put("/{portfolio_id}", response_model=PortfolioResponse)
@@ -145,7 +177,8 @@ async def update_portfolio(
     db.commit()
     db.refresh(db_portfolio)
     
-    return db_portfolio
+    # Clean NaN values to prevent JSON serialization issues
+    return clean_nan_values(db_portfolio.__dict__)
 
 
 @router.delete("/{portfolio_id}")

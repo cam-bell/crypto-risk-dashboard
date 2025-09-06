@@ -39,12 +39,26 @@ export function DashboardOverview() {
     realTimeData: assetsRealTime,
   } = useCryptoAssets();
 
-  const {
-    useRiskMetrics: usePortfolioRiskMetrics,
-    calculateRiskScore,
-    getRiskLevel,
-    getRiskSummary,
-  } = useRiskMetrics();
+  // Risk metrics utilities (no portfolio-specific data needed for dashboard overview)
+  const getRiskLevel = (score: number) => {
+    if (score <= 3) return { level: "Low", color: "green" };
+    if (score <= 6) return { level: "Medium", color: "yellow" };
+    if (score <= 8) return { level: "High", color: "orange" };
+    return { level: "Very High", color: "red" };
+  };
+
+  const getRiskSummary = (portfolios: any[]) => {
+    const totalRisk = portfolios.reduce(
+      (sum, p) => sum + (p.risk_score || 0),
+      0
+    );
+    const avgRisk = portfolios.length > 0 ? totalRisk / portfolios.length : 0;
+    return {
+      average: avgRisk,
+      level: getRiskLevel(avgRisk).level,
+      total: portfolios.length,
+    };
+  };
 
   // Auto-refresh functionality
   useEffect(() => {
@@ -180,7 +194,7 @@ export function DashboardOverview() {
                           {portfolio.name}
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          ${portfolio.total_value.toLocaleString()}
+                          ${(portfolio.total_value_usd || 0).toLocaleString()}
                         </p>
                       </div>
                       <ArrowRight className="w-4 h-4 text-gray-400" />

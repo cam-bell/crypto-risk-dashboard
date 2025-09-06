@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { useRiskMetrics } from "@/hooks/useRiskMetrics";
 import {
   BarChart3,
   TrendingUp,
@@ -10,6 +11,9 @@ import {
   Shield,
   Activity,
   RefreshCw,
+  TrendingDown,
+  Target,
+  Zap,
 } from "lucide-react";
 import {
   BarChart,
@@ -23,25 +27,31 @@ import {
   Line,
   AreaChart,
   Area,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
-import { useRiskMetrics } from "@/hooks/useRiskMetrics";
 import { formatPercentage, formatNumber, getRiskColor } from "@/lib/utils";
 
 interface RiskMetricsProps {
   portfolioId: string;
+  demoData?: any;
+  isDemo?: boolean;
 }
 
-export function RiskMetrics({ portfolioId }: RiskMetricsProps) {
+export function RiskMetrics({
+  portfolioId,
+  demoData,
+  isDemo = false,
+}: RiskMetricsProps) {
   const [timeframe, setTimeframe] = useState<"1d" | "1w" | "1m" | "3m">("1w");
-  const riskMetricsHook = useRiskMetrics();
-  const {
-    data: riskMetrics,
-    isLoading,
-    error,
-    refetch,
-  } = riskMetricsHook.useRiskMetrics(portfolioId);
+  const { riskMetrics, isLoading, error, refetch } =
+    useRiskMetrics(portfolioId);
 
-  if (isLoading) {
+  // Use demo data if provided
+  const currentRiskMetrics = isDemo ? demoData : riskMetrics;
+
+  if (isLoading && !isDemo) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -49,7 +59,7 @@ export function RiskMetrics({ portfolioId }: RiskMetricsProps) {
     );
   }
 
-  if (error) {
+  if (error && !isDemo) {
     return (
       <div className="text-center py-8">
         <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
@@ -65,7 +75,7 @@ export function RiskMetrics({ portfolioId }: RiskMetricsProps) {
     );
   }
 
-  if (!riskMetrics) {
+  if (!currentRiskMetrics) {
     return (
       <div className="text-center py-8">
         <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -88,11 +98,16 @@ export function RiskMetrics({ portfolioId }: RiskMetricsProps) {
     volatility,
     beta,
     risk_decomposition,
-  } = riskMetrics;
+    volatility_30d,
+    volatility_90d,
+    volatility_365d,
+    expected_shortfall,
+    correlation_to_market,
+  } = currentRiskMetrics;
 
   // Prepare data for charts
   const riskDecompositionData =
-    risk_decomposition?.map((item, index) => ({
+    risk_decomposition?.map((item: any, index: number) => ({
       asset: item.asset,
       contribution: item.contribution,
       percentage: item.percentage,
@@ -103,13 +118,23 @@ export function RiskMetrics({ portfolioId }: RiskMetricsProps) {
     { metric: "VaR (95%)", value: var_95, color: "#ef4444" },
     { metric: "VaR (99%)", value: var_99, color: "#dc2626" },
     { metric: "Max Drawdown", value: max_drawdown, color: "#f59e0b" },
-    { metric: "Volatility", value: volatility, color: "#8b5cf6" },
+    {
+      metric: "Volatility",
+      value: volatility || volatility_30d,
+      color: "#8b5cf6",
+    },
   ];
 
   const performanceMetricsData = [
     { metric: "Sharpe Ratio", value: sharpe_ratio, color: "#10b981" },
     { metric: "Sortino Ratio", value: sortino_ratio, color: "#059669" },
     { metric: "Beta", value: beta, color: "#3b82f6" },
+  ];
+
+  const volatilityData = [
+    { period: "30D", value: volatility_30d || volatility, color: "#3b82f6" },
+    { period: "90D", value: volatility_90d, color: "#8b5cf6" },
+    { period: "365D", value: volatility_365d, color: "#ef4444" },
   ];
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -179,47 +204,62 @@ export function RiskMetrics({ portfolioId }: RiskMetricsProps) {
 
   return (
     <div className="space-y-6">
+      {/* Demo Notice */}
+      {isDemo && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-center space-x-2 text-blue-700 dark:text-blue-300">
+            <Shield className="h-5 w-5" />
+            <span className="text-sm font-medium">
+              Demo Risk Metrics - Create a portfolio to get personalized
+              analysis
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Timeframe selector */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Button
-            variant={timeframe === "1d" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTimeframe("1d")}
-          >
-            1D
-          </Button>
-          <Button
-            variant={timeframe === "1w" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTimeframe("1w")}
-          >
-            1W
-          </Button>
-          <Button
-            variant={timeframe === "1m" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTimeframe("1m")}
-          >
-            1M
-          </Button>
-          <Button
-            variant={timeframe === "3m" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTimeframe("3m")}
-          >
-            3M
+      {!isDemo && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Button
+              variant={timeframe === "1d" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTimeframe("1d")}
+            >
+              1D
+            </Button>
+            <Button
+              variant={timeframe === "1w" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTimeframe("1w")}
+            >
+              1W
+            </Button>
+            <Button
+              variant={timeframe === "1m" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTimeframe("1m")}
+            >
+              1M
+            </Button>
+            <Button
+              variant={timeframe === "3m" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTimeframe("3m")}
+            >
+              3M
+            </Button>
+          </div>
+
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
           </Button>
         </div>
-
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
+      )}
 
       {/* Key risk indicators */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">
@@ -286,6 +326,28 @@ export function RiskMetrics({ portfolioId }: RiskMetricsProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Volatility Analysis */}
+      {volatilityData.some((v) => v.value) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Volatility Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={volatilityData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="period" />
+                  <YAxis />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Risk decomposition chart */}
       {riskDecompositionData.length > 0 && (

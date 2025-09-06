@@ -71,21 +71,26 @@ export function PortfolioOverview({ portfolioId }: PortfolioOverviewProps) {
     );
   }
 
-  const { holdings, total_value, total_cost, total_pnl, total_pnl_percentage } =
-    portfolio;
+  const {
+    holdings,
+    total_value_usd,
+    total_invested_usd,
+    total_profit_loss_usd,
+    total_profit_loss_percentage,
+  } = portfolio;
 
   // Prepare data for pie chart
   const pieChartData = holdings.map((holding, index) => ({
-    name: holding.asset.symbol,
-    value: holding.current_value,
-    percentage: holding.allocation_percentage,
+    name: holding.crypto_asset?.symbol || "Unknown",
+    value: holding.current_value_usd,
+    percentage: (holding.current_value_usd / total_value_usd) * 100, // Calculate allocation percentage
     color: COLORS[index % COLORS.length],
-    asset: holding.asset,
+    asset: holding.crypto_asset,
   }));
 
   // Sort holdings by value (descending)
   const sortedHoldings = [...holdings].sort(
-    (a, b) => b.current_value - a.current_value
+    (a, b) => b.current_value_usd - a.current_value_usd
   );
 
   const CustomTooltip = ({ active, payload }: any) => {
@@ -116,7 +121,7 @@ export function PortfolioOverview({ portfolioId }: PortfolioOverviewProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(total_value)}
+              {formatCurrency(total_value_usd)}
             </div>
             <p className="text-xs text-muted-foreground">
               {holdings.length} asset{holdings.length !== 1 ? "s" : ""}
@@ -130,7 +135,7 @@ export function PortfolioOverview({ portfolioId }: PortfolioOverviewProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(total_cost)}
+              {formatCurrency(total_invested_usd)}
             </div>
             <p className="text-xs text-muted-foreground">Average cost basis</p>
           </CardContent>
@@ -142,13 +147,15 @@ export function PortfolioOverview({ portfolioId }: PortfolioOverviewProps) {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${getChangeColor(total_pnl_percentage)}`}
+              className={`text-2xl font-bold ${getChangeColor(total_profit_loss_percentage)}`}
             >
-              {formatCurrency(total_pnl)}
+              {formatCurrency(total_profit_loss_usd)}
             </div>
-            <p className={`text-xs ${getChangeColor(total_pnl_percentage)}`}>
-              {total_pnl >= 0 ? "+" : ""}
-              {formatPercentage(total_pnl_percentage)}
+            <p
+              className={`text-xs ${getChangeColor(total_profit_loss_percentage)}`}
+            >
+              {total_profit_loss_usd >= 0 ? "+" : ""}
+              {formatPercentage(total_profit_loss_percentage)}
             </p>
           </CardContent>
         </Card>
@@ -252,28 +259,30 @@ export function PortfolioOverview({ portfolioId }: PortfolioOverviewProps) {
                       />
                       <div className="flex items-center space-x-2">
                         <img
-                          src={holding.asset.image}
-                          alt={holding.asset.name}
+                          src={holding.crypto_asset?.logo_url || ""}
+                          alt={holding.crypto_asset?.name || "Unknown"}
                           className="w-6 h-6 rounded-full"
                         />
                         <div>
-                          <p className="font-medium">{holding.asset.symbol}</p>
+                          <p className="font-medium">
+                            {holding.crypto_asset?.symbol || "Unknown"}
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             {formatCompactNumber(holding.quantity)}{" "}
-                            {holding.asset.symbol}
+                            {holding.crypto_asset?.symbol || "Unknown"}
                           </p>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-medium">
-                        {formatCurrency(holding.current_value)}
+                        {formatCurrency(holding.current_value_usd)}
                       </p>
                       <p
-                        className={`text-sm ${getChangeColor(holding.unrealized_pnl_percentage)}`}
+                        className={`text-sm ${getChangeColor(holding.profit_loss_percentage)}`}
                       >
-                        {holding.unrealized_pnl_percentage >= 0 ? "+" : ""}
-                        {formatPercentage(holding.unrealized_pnl_percentage)}
+                        {holding.profit_loss_percentage >= 0 ? "+" : ""}
+                        {formatPercentage(holding.profit_loss_percentage)}
                       </p>
                     </div>
                   </div>
@@ -320,16 +329,16 @@ export function PortfolioOverview({ portfolioId }: PortfolioOverviewProps) {
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-3">
                           <img
-                            src={holding.asset.image}
-                            alt={holding.asset.name}
+                            src={holding.crypto_asset?.logo_url || ""}
+                            alt={holding.crypto_asset?.name || "Unknown"}
                             className="w-8 h-8 rounded-full"
                           />
                           <div>
                             <p className="font-medium">
-                              {holding.asset.symbol}
+                              {holding.crypto_asset?.symbol || "Unknown"}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {holding.asset.name}
+                              {holding.crypto_asset?.name || "Unknown"}
                             </p>
                           </div>
                         </div>
@@ -338,31 +347,33 @@ export function PortfolioOverview({ portfolioId }: PortfolioOverviewProps) {
                         {formatCompactNumber(holding.quantity)}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {formatCurrency(holding.average_price)}
+                        {formatCurrency(holding.average_buy_price_usd)}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {formatCurrency(holding.asset.current_price)}
+                        {formatCurrency(
+                          holding.crypto_asset?.current_price_usd || 0
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right font-medium">
-                        {formatCurrency(holding.current_value)}
+                        {formatCurrency(holding.current_value_usd)}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div
-                          className={`${getChangeColor(holding.unrealized_pnl_percentage)}`}
+                          className={`${getChangeColor(holding.profit_loss_percentage)}`}
                         >
                           <p className="font-medium">
-                            {formatCurrency(holding.unrealized_pnl)}
+                            {formatCurrency(holding.profit_loss_usd)}
                           </p>
                           <p className="text-sm">
-                            {holding.unrealized_pnl_percentage >= 0 ? "+" : ""}
-                            {formatPercentage(
-                              holding.unrealized_pnl_percentage
-                            )}
+                            {holding.profit_loss_percentage >= 0 ? "+" : ""}
+                            {formatPercentage(holding.profit_loss_percentage)}
                           </p>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {formatPercentage(holding.allocation_percentage)}
+                        {formatPercentage(
+                          (holding.current_value_usd / total_value_usd) * 100
+                        )}
                       </td>
                     </tr>
                   ))}

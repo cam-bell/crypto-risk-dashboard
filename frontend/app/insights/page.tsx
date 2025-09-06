@@ -6,21 +6,21 @@ import { usePortfolios } from "@/hooks/usePortfolios";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { 
-  Brain, 
-  TrendingUp, 
-  RefreshCw, 
+import {
+  Brain,
+  TrendingUp,
+  RefreshCw,
   Trash2,
   Calendar,
   BarChart3,
   Target,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function InsightsPage() {
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
-  
+
   const { portfolios } = usePortfolios();
   const {
     weeklyAnalysis,
@@ -41,11 +41,11 @@ export default function InsightsPage() {
   } = useAIInsightsHub();
 
   const handleGenerateWeekly = () => {
-    generateWeeklyAnalysis();
+    generateWeeklyAnalysis(selectedPortfolioId || undefined);
   };
 
   const handleGenerateSentiment = () => {
-    generateMarketSentiment();
+    generateMarketSentiment(selectedPortfolioId || undefined);
   };
 
   const handleGenerateRebalancing = () => {
@@ -84,9 +84,11 @@ export default function InsightsPage() {
           className="flex items-center space-x-2"
         >
           <Calendar className="h-4 w-4" />
-          <span>{isGeneratingWeekly ? "Generating..." : "Weekly Analysis"}</span>
+          <span>
+            {isGeneratingWeekly ? "Generating..." : "Weekly Analysis"}
+          </span>
         </Button>
-        
+
         <Button
           onClick={handleGenerateSentiment}
           disabled={isGeneratingSentiment}
@@ -94,9 +96,11 @@ export default function InsightsPage() {
           className="flex items-center space-x-2"
         >
           <TrendingUp className="h-4 w-4" />
-          <span>{isGeneratingSentiment ? "Analyzing..." : "Market Sentiment"}</span>
+          <span>
+            {isGeneratingSentiment ? "Analyzing..." : "Market Sentiment"}
+          </span>
         </Button>
-        
+
         <div className="flex items-center space-x-2">
           <select
             value={selectedPortfolioId}
@@ -117,7 +121,9 @@ export default function InsightsPage() {
             className="flex items-center space-x-2"
           >
             <Target className="h-4 w-4" />
-            <span>{isGeneratingRebalancing ? "Generating..." : "Rebalancing"}</span>
+            <span>
+              {isGeneratingRebalancing ? "Generating..." : "Rebalancing"}
+            </span>
           </Button>
         </div>
       </div>
@@ -140,7 +146,12 @@ export default function InsightsPage() {
                 size="sm"
                 variant="ghost"
               >
-                <RefreshCw className={cn("h-4 w-4", isGeneratingWeekly && "animate-spin")} />
+                <RefreshCw
+                  className={cn(
+                    "h-4 w-4",
+                    isGeneratingWeekly && "animate-spin"
+                  )}
+                />
               </Button>
               {weeklyAnalysis?.id && (
                 <Button
@@ -155,7 +166,7 @@ export default function InsightsPage() {
               )}
             </div>
           </div>
-          
+
           {weeklyLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-4 w-full" />
@@ -165,10 +176,12 @@ export default function InsightsPage() {
           ) : weeklyAnalysis ? (
             <div className="space-y-3">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {weeklyAnalysis.summary || "Weekly market analysis and portfolio insights."}
+                {weeklyAnalysis.summary ||
+                  "Weekly market analysis and portfolio insights."}
               </p>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Generated: {new Date(weeklyAnalysis.created_at).toLocaleDateString()}
+                Generated:{" "}
+                {new Date(weeklyAnalysis.generated_at).toLocaleDateString()}
               </div>
             </div>
           ) : (
@@ -194,7 +207,12 @@ export default function InsightsPage() {
                 size="sm"
                 variant="ghost"
               >
-                <RefreshCw className={cn("h-4 w-4", isGeneratingSentiment && "animate-spin")} />
+                <RefreshCw
+                  className={cn(
+                    "h-4 w-4",
+                    isGeneratingSentiment && "animate-spin"
+                  )}
+                />
               </Button>
               {marketSentiment?.id && (
                 <Button
@@ -209,7 +227,7 @@ export default function InsightsPage() {
               )}
             </div>
           </div>
-          
+
           {sentimentLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-4 w-full" />
@@ -219,15 +237,18 @@ export default function InsightsPage() {
           ) : marketSentiment ? (
             <div className="space-y-3">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {marketSentiment.summary || "Current market sentiment analysis and trends."}
+                {marketSentiment.summary ||
+                  "Current market sentiment analysis and trends."}
               </p>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Generated: {new Date(marketSentiment.created_at).toLocaleDateString()}
+                Generated:{" "}
+                {new Date(marketSentiment.generated_at).toLocaleDateString()}
               </div>
             </div>
           ) : (
             <p className="text-gray-500 dark:text-gray-400">
-              No market sentiment available. Click "Market Sentiment" to generate.
+              No market sentiment available. Click "Market Sentiment" to
+              generate.
             </p>
           )}
         </Card>
@@ -248,7 +269,12 @@ export default function InsightsPage() {
                 size="sm"
                 variant="ghost"
               >
-                <RefreshCw className={cn("h-4 w-4", isGeneratingRebalancing && "animate-spin")} />
+                <RefreshCw
+                  className={cn(
+                    "h-4 w-4",
+                    isGeneratingRebalancing && "animate-spin"
+                  )}
+                />
               </Button>
               {rebalancingSuggestions?.id && (
                 <Button
@@ -263,7 +289,7 @@ export default function InsightsPage() {
               )}
             </div>
           </div>
-          
+
           {rebalancingLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-4 w-full" />
@@ -273,10 +299,14 @@ export default function InsightsPage() {
           ) : rebalancingSuggestions ? (
             <div className="space-y-3">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {rebalancingSuggestions.summary || "AI-powered rebalancing recommendations for optimal portfolio allocation."}
+                {rebalancingSuggestions.summary ||
+                  "AI-powered rebalancing recommendations for optimal portfolio allocation."}
               </p>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Generated: {new Date(rebalancingSuggestions.created_at).toLocaleDateString()}
+                Generated:{" "}
+                {new Date(
+                  rebalancingSuggestions.generated_at
+                ).toLocaleDateString()}
               </div>
             </div>
           ) : (
@@ -286,7 +316,8 @@ export default function InsightsPage() {
                 No rebalancing suggestions available.
               </p>
               <p className="text-sm text-gray-400 dark:text-gray-500">
-                Select a portfolio and click "Rebalancing" to generate AI-powered suggestions.
+                Select a portfolio and click "Rebalancing" to generate
+                AI-powered suggestions.
               </p>
             </div>
           )}
@@ -333,7 +364,8 @@ export default function InsightsPage() {
               AI Insights Engine
             </h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Our AI analyzes market data, portfolio performance, and risk metrics to provide personalized insights and recommendations.
+              Our AI analyzes market data, portfolio performance, and risk
+              metrics to provide personalized insights and recommendations.
             </p>
           </div>
         </div>

@@ -12,7 +12,8 @@ export function ActivePortfoliosCard() {
   }
 
   const activePortfolios = portfolios.filter(
-    (portfolio) => portfolio.total_value > 0 || portfolio.holdings.length > 0
+    (portfolio) =>
+      portfolio.total_value_usd > 0 || portfolio.holdings.length > 0
   );
 
   return (

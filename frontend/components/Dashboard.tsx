@@ -57,13 +57,15 @@ export function Dashboard() {
   } = useCryptoAssets();
 
   const {
-    useRiskMetrics: usePortfolioRiskMetrics,
-    calculateRiskScore,
+    riskMetrics,
+    historicalMetrics,
+    correlationMatrix,
+    composition,
+    isLoading: riskLoading,
+    calculateRisk,
     getRiskLevel,
     getRiskSummary,
-    subscribeToRiskMetrics,
-    unsubscribeFromRiskMetrics,
-  } = useRiskMetrics();
+  } = useRiskMetrics(selectedPortfolioId || "");
 
   // Auto-select first portfolio if available
   useEffect(() => {
@@ -76,12 +78,12 @@ export function Dashboard() {
   useEffect(() => {
     if (selectedPortfolioId) {
       subscribeToPortfolio(selectedPortfolioId);
-      subscribeToRiskMetrics(selectedPortfolioId);
+      // Risk metrics are automatically loaded via useRiskMetrics hook
 
       // Subscribe to price updates for portfolio assets
       const portfolio = portfolios.find((p) => p.id === selectedPortfolioId);
       if (portfolio) {
-        const assetIds = portfolio.holdings.map((h) => h.asset_id);
+        const assetIds = portfolio.holdings.map((h) => h.crypto_asset_id);
         subscribeToAssets(assetIds);
       }
     }
@@ -89,11 +91,11 @@ export function Dashboard() {
     return () => {
       if (selectedPortfolioId) {
         unsubscribeFromPortfolio(selectedPortfolioId);
-        unsubscribeFromRiskMetrics(selectedPortfolioId);
+        // Risk metrics cleanup handled by useRiskMetrics hook
 
         const portfolio = portfolios.find((p) => p.id === selectedPortfolioId);
         if (portfolio) {
-          const assetIds = portfolio.holdings.map((h) => h.asset_id);
+          const assetIds = portfolio.holdings.map((h) => h.crypto_asset_id);
           unsubscribeFromAssets(assetIds);
         }
       }
@@ -123,10 +125,8 @@ export function Dashboard() {
   const selectedPortfolio = portfolios.find(
     (p) => p.id === selectedPortfolioId
   );
-  const riskMetrics = usePortfolioRiskMetrics(selectedPortfolioId || "");
-  const riskSummary = riskMetrics.data
-    ? getRiskSummary(riskMetrics.data)
-    : null;
+  // riskMetrics is already available from the useRiskMetrics hook above
+  const riskSummary = getRiskSummary();
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
@@ -246,7 +246,7 @@ export function Dashboard() {
             <option value="">Choose a portfolio</option>
             {portfolios.map((portfolio) => (
               <option key={portfolio.id} value={portfolio.id}>
-                {portfolio.name} (${portfolio.total_value.toLocaleString()})
+                {portfolio.name} (${portfolio.total_value_usd.toLocaleString()})
               </option>
             ))}
           </select>

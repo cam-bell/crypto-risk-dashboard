@@ -16,9 +16,9 @@ export interface PriceUpdate {
 
 export interface PortfolioUpdate {
   portfolio_id: string;
-  total_value: number;
-  total_pnl: number;
-  total_pnl_percentage: number;
+  total_value_usd: number;
+  total_profit_loss_usd: number;
+  total_profit_loss_percentage: number;
   risk_score: number;
   updated_at: string;
 }
@@ -149,9 +149,9 @@ export function useRealTimeData(config: RealTimeConfig = {}) {
           if (!oldData) return oldData;
           return {
             ...oldData,
-            total_value: update.total_value,
-            total_pnl: update.total_pnl,
-            total_pnl_percentage: update.total_pnl_percentage,
+            total_value_usd: update.total_value_usd,
+            total_profit_loss_usd: update.total_profit_loss_usd,
+            total_profit_loss_percentage: update.total_profit_loss_percentage,
             risk_score: update.risk_score,
             updated_at: update.updated_at,
           };

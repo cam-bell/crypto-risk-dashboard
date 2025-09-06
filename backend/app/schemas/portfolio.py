@@ -5,6 +5,7 @@ Pydantic schemas for portfolio API endpoints
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+from .crypto_asset import CryptoAssetResponse
 
 
 class PortfolioBase(BaseModel):
@@ -41,6 +42,7 @@ class PortfolioHoldingResponse(BaseModel):
     notes: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    crypto_asset: Optional[CryptoAssetResponse] = None
 
     class Config:
         from_attributes = True

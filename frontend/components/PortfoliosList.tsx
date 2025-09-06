@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePortfolios } from "@/hooks/usePortfolios";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { PortfolioCreationModal } from "./PortfolioCreationModal";
 import {
@@ -19,6 +20,7 @@ import {
 
 export function PortfoliosList() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const {
     portfolios,
@@ -26,7 +28,7 @@ export function PortfoliosList() {
     getPortfolioStats,
     getTopPerformers,
     getHighestRisk,
-    createPortfolio,
+    createPortfolioMutation,
     isCreating,
   } = usePortfolios();
 
@@ -37,7 +39,7 @@ export function PortfoliosList() {
     bitcoin: "93c19608-441b-454c-af58-3d3c3846aa5d",
     ethereum: "3d79dad5-e930-4a17-a035-878031e68a6a",
     cardano: "158c9204-1b0e-4b78-8a39-80ba975a5759",
-    ripple: "ripple", // XRP not in database yet
+    // Add more assets as needed - XRP not in database yet
   };
 
   const handleCreatePortfolio = async (portfolioData: {
@@ -51,61 +53,71 @@ export function PortfoliosList() {
       average_price: number;
     }>;
   }) => {
+    console.log("🚀 handleCreatePortfolio called with:", portfolioData);
     try {
       // Create the portfolio using the API
-      createPortfolio(
-        {
-          name: portfolioData.name,
-          description: portfolioData.description,
-          total_value: 0, // Will be calculated
-          total_cost: 0, // Will be calculated
-          total_pnl: 0, // Will be calculated
-          total_pnl_percentage: 0, // Will be calculated
-          risk_score: 0, // Will be calculated
-          holdings: [], // Will be populated after creating holdings
-        },
-        {
-          onSuccess: async (createdPortfolio) => {
-            // Create holdings for each asset
-            for (const asset of portfolioData.assets) {
-              const cryptoAssetId = assetIdMapping[asset.asset_id];
+      console.log("📡 Calling createPortfolio...");
+      const createdPortfolio = await createPortfolioMutation.mutateAsync({
+        name: portfolioData.name,
+        description: portfolioData.description,
+        // Backend will set these values automatically
+      });
 
-              if (!cryptoAssetId) {
-                console.warn(`Asset ID ${asset.asset_id} not found in mapping`);
-                continue;
-              }
+      console.log("✅ Portfolio created successfully:", createdPortfolio);
 
-              try {
-                // We need to get the holdings hook for this portfolio
-                // For now, we'll use the API client directly
-                const { apiClient } = await import("@/lib/api");
-                await apiClient.addPortfolioHolding(createdPortfolio.id, {
-                  crypto_asset_id: cryptoAssetId,
-                  quantity: asset.quantity,
-                  average_buy_price_usd: asset.average_price,
-                  notes: `Added via portfolio creation`,
-                });
-              } catch (holdingError) {
-                console.error(
-                  `Error creating holding for ${asset.name}:`,
-                  holdingError
-                );
-              }
-            }
+      // Create holdings for each asset
+      for (const asset of portfolioData.assets) {
+        const cryptoAssetId = assetIdMapping[asset.asset_id];
 
-            // Show success message
-            alert(
-              `Portfolio "${portfolioData.name}" created successfully with ${portfolioData.assets.length} assets!`
-            );
-          },
-          onError: (error) => {
-            console.error("Error creating portfolio:", error);
-            alert("Failed to create portfolio. Please try again.");
-          },
+        if (!cryptoAssetId) {
+          console.warn(`Asset ID ${asset.asset_id} not found in mapping`);
+          continue;
         }
+
+        try {
+          console.log(`🔄 Adding holding for ${asset.name}:`, {
+            portfolioId: createdPortfolio.id,
+            cryptoAssetId,
+            quantity: asset.quantity,
+            average_price: asset.average_price,
+          });
+
+          // We need to get the holdings hook for this portfolio
+          // For now, we'll use the API client directly
+          const { apiClient } = await import("@/lib/api");
+          const holdingResult = await apiClient.addPortfolioHolding(
+            createdPortfolio.id,
+            {
+              crypto_asset_id: cryptoAssetId,
+              quantity: asset.quantity,
+              average_buy_price_usd: asset.average_price,
+              notes: `Added via portfolio creation`,
+            }
+          );
+
+          console.log(
+            `✅ Holding created successfully for ${asset.name}:`,
+            holdingResult
+          );
+        } catch (holdingError) {
+          console.error(
+            `❌ Error creating holding for ${asset.name}:`,
+            holdingError
+          );
+        }
+      }
+
+      // Invalidate cache to refresh portfolio data with holdings
+      console.log("🔄 Invalidating React Query cache...");
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      console.log("✅ Cache invalidated, should trigger refetch");
+
+      // Show success message
+      alert(
+        `Portfolio "${portfolioData.name}" created successfully with ${portfolioData.assets.length} assets!`
       );
     } catch (error) {
-      console.error("Error creating portfolio:", error);
+      console.error("❌ Outer catch - Error creating portfolio:", error);
       alert("Failed to create portfolio. Please try again.");
     }
   };
@@ -253,7 +265,7 @@ export function PortfoliosList() {
                             Total Value
                           </span>
                           <span className="font-semibold text-gray-900 dark:text-white">
-                            ${portfolio.total_value.toLocaleString()}
+                            ${(portfolio.total_value_usd || 0).toLocaleString()}
                           </span>
                         </div>
 
@@ -272,20 +284,28 @@ export function PortfoliosList() {
                         </div>
 
                         {/* Performance */}
-                        {portfolio.total_pnl !== undefined && (
+                        {portfolio.total_profit_loss_percentage !==
+                          undefined && (
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-500 dark:text-gray-400">
                               24h P&L
                             </span>
                             <span
                               className={`font-semibold ${
-                                portfolio.total_pnl >= 0
+                                (portfolio.total_profit_loss_percentage || 0) >=
+                                0
                                   ? "text-green-600"
                                   : "text-red-600"
                               }`}
                             >
-                              {portfolio.total_pnl >= 0 ? "+" : ""}
-                              {portfolio.total_pnl.toFixed(2)}%
+                              {(portfolio.total_profit_loss_percentage || 0) >=
+                              0
+                                ? "+"
+                                : ""}
+                              {(
+                                portfolio.total_profit_loss_percentage || 0
+                              ).toFixed(2)}
+                              %
                             </span>
                           </div>
                         )}

@@ -49,7 +49,11 @@ export function useAIInsightsHub() {
 
   // Generate weekly analysis mutation
   const generateWeeklyAnalysisMutation = useMutation({
-    mutationFn: () => apiClient.getWeeklyAnalysis(),
+    mutationFn: (portfolioId?: string) =>
+      apiClient.getWeeklyAnalysis(portfolioId),
+    onSuccess: () => {
+      toast.success("Weekly analysis generated successfully");
+    },
     onMutate: async () => {
       await queryClient.cancelQueries({
         queryKey: ["ai-insights", "weekly-analysis"],
@@ -62,14 +66,18 @@ export function useAIInsightsHub() {
 
       return { previousWeekly };
     },
-    onError: (err, variables, context) => {
+    onError: (err: any, variables, context) => {
       if (context?.previousWeekly) {
         queryClient.setQueryData(
           ["ai-insights", "weekly-analysis"],
           context.previousWeekly
         );
       }
-      toast.error("Failed to generate weekly analysis");
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to generate weekly analysis";
+      toast.error(errorMessage);
     },
     onSettled: () => {
       queryClient.invalidateQueries({
@@ -80,7 +88,11 @@ export function useAIInsightsHub() {
 
   // Generate market sentiment mutation
   const generateMarketSentimentMutation = useMutation({
-    mutationFn: () => apiClient.getMarketSentiment(),
+    mutationFn: (portfolioId?: string) =>
+      apiClient.getMarketSentiment(portfolioId),
+    onSuccess: () => {
+      toast.success("Market sentiment analysis generated successfully");
+    },
     onMutate: async () => {
       await queryClient.cancelQueries({
         queryKey: ["ai-insights", "market-sentiment"],
@@ -93,14 +105,18 @@ export function useAIInsightsHub() {
 
       return { previousSentiment };
     },
-    onError: (err, variables, context) => {
+    onError: (err: any, variables, context) => {
       if (context?.previousSentiment) {
         queryClient.setQueryData(
           ["ai-insights", "market-sentiment"],
           context.previousSentiment
         );
       }
-      toast.error("Failed to generate market sentiment");
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to generate market sentiment";
+      toast.error(errorMessage);
     },
     onSettled: () => {
       queryClient.invalidateQueries({
@@ -111,7 +127,11 @@ export function useAIInsightsHub() {
 
   // Generate rebalancing suggestions mutation
   const generateRebalancingSuggestionsMutation = useMutation({
-    mutationFn: (portfolioId?: string) => apiClient.getRebalancingSuggestions(portfolioId),
+    mutationFn: (portfolioId?: string) =>
+      apiClient.getRebalancingSuggestions(portfolioId),
+    onSuccess: () => {
+      toast.success("Rebalancing suggestions generated successfully");
+    },
     onMutate: async () => {
       await queryClient.cancelQueries({
         queryKey: ["ai-insights", "rebalancing-suggestions"],
@@ -124,14 +144,18 @@ export function useAIInsightsHub() {
 
       return { previousRebalancing };
     },
-    onError: (err, variables, context) => {
+    onError: (err: any, variables, context) => {
       if (context?.previousRebalancing) {
         queryClient.setQueryData(
           ["ai-insights", "rebalancing-suggestions"],
           context.previousRebalancing
         );
       }
-      toast.error("Failed to generate rebalancing suggestions");
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to generate rebalancing suggestions";
+      toast.error(errorMessage);
     },
     onSettled: () => {
       queryClient.invalidateQueries({
@@ -176,7 +200,8 @@ export function useAIInsightsHub() {
     // Mutations
     generateWeeklyAnalysis: generateWeeklyAnalysisMutation.mutate,
     generateMarketSentiment: generateMarketSentimentMutation.mutate,
-    generateRebalancingSuggestions: generateRebalancingSuggestionsMutation.mutate,
+    generateRebalancingSuggestions:
+      generateRebalancingSuggestionsMutation.mutate,
     deleteInsight: deleteInsightMutation.mutate,
 
     // Mutation states

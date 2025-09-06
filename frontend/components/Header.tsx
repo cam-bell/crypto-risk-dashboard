@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useThemeContext } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/Button";
+import { PortfolioSelector } from "@/components/PortfolioSelector";
 import {
   Menu,
   X,
@@ -72,6 +73,11 @@ export function Header() {
                 <span>{item.name}</span>
               </Link>
             ))}
+
+            {/* Portfolio Selector */}
+            <div className="ml-4 pl-4 border-l border-border">
+              <PortfolioSelector />
+            </div>
           </nav>
 
           {/* Right side actions */}

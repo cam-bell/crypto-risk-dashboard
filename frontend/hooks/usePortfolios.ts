@@ -22,7 +22,12 @@ export function usePortfolios() {
     refetch,
   } = useQuery({
     queryKey: ["portfolios"],
-    queryFn: apiClient.getPortfolios,
+    queryFn: async () => {
+      console.log("🔄 usePortfolios: Fetching portfolios from API...");
+      const result = await apiClient.getPortfolios();
+      console.log("✅ usePortfolios: Received portfolios:", result);
+      return result;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes for portfolio list
     gcTime: 15 * 60 * 1000, // 15 minutes
     refetchInterval: false, // No automatic refetch
@@ -51,7 +56,7 @@ export function usePortfolios() {
 
   // Create portfolio mutation
   const createPortfolioMutation = useMutation({
-    mutationFn: apiClient.createPortfolio,
+    mutationFn: (data: Partial<Portfolio>) => apiClient.createPortfolio(data),
     onMutate: async (newPortfolio) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["portfolios"] });
@@ -65,10 +70,10 @@ export function usePortfolios() {
         {
           id: `temp-${Date.now()}`,
           ...newPortfolio,
-          total_value: 0,
-          total_cost: 0,
-          total_pnl: 0,
-          total_pnl_percentage: 0,
+          total_value_usd: 0,
+          total_invested_usd: 0,
+          total_profit_loss_usd: 0,
+          total_profit_loss_percentage: 0,
           risk_score: 0,
           holdings: [],
           created_at: new Date().toISOString(),
@@ -139,7 +144,7 @@ export function usePortfolios() {
 
   // Delete portfolio mutation
   const deletePortfolioMutation = useMutation({
-    mutationFn: apiClient.deletePortfolio,
+    mutationFn: (id: string) => apiClient.deletePortfolio(id),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["portfolios"] });
 
@@ -180,11 +185,21 @@ export function usePortfolios() {
   const getPortfolioStats = () => {
     if (!portfolios.length) return null;
 
-    const totalValue = portfolios.reduce((sum, p) => sum + p.total_value, 0);
-    const totalCost = portfolios.reduce((sum, p) => sum + p.total_cost, 0);
-    const totalPnl = portfolios.reduce((sum, p) => sum + p.total_pnl, 0);
+    const totalValue = portfolios.reduce(
+      (sum, p) => sum + (p.total_value_usd || 0),
+      0
+    );
+    const totalCost = portfolios.reduce(
+      (sum, p) => sum + (p.total_invested_usd || 0),
+      0
+    );
+    const totalPnl = portfolios.reduce(
+      (sum, p) => sum + (p.total_profit_loss_usd || 0),
+      0
+    );
     const avgRiskScore =
-      portfolios.reduce((sum, p) => sum + p.risk_score, 0) / portfolios.length;
+      portfolios.reduce((sum, p) => sum + (p.risk_score || 0), 0) /
+      portfolios.length;
 
     return {
       totalValue,
@@ -193,22 +208,30 @@ export function usePortfolios() {
       totalPnlPercentage: totalCost > 0 ? (totalPnl / totalCost) * 100 : 0,
       avgRiskScore,
       portfolioCount: portfolios.length,
-      profitablePortfolios: portfolios.filter((p) => p.total_pnl > 0).length,
-      losingPortfolios: portfolios.filter((p) => p.total_pnl < 0).length,
+      profitablePortfolios: portfolios.filter(
+        (p) => (p.total_profit_loss_usd || 0) > 0
+      ).length,
+      losingPortfolios: portfolios.filter(
+        (p) => (p.total_profit_loss_usd || 0) < 0
+      ).length,
     };
   };
 
   // Get top performing portfolios
   const getTopPerformers = (limit: number = 5) => {
     return [...portfolios]
-      .sort((a, b) => b.total_pnl_percentage - a.total_pnl_percentage)
+      .sort(
+        (a, b) =>
+          (b.total_profit_loss_percentage || 0) -
+          (a.total_profit_loss_percentage || 0)
+      )
       .slice(0, limit);
   };
 
   // Get highest risk portfolios
   const getHighestRisk = (limit: number = 5) => {
     return [...portfolios]
-      .sort((a, b) => b.risk_score - a.risk_score)
+      .sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0))
       .slice(0, limit);
   };
 
@@ -224,6 +247,7 @@ export function usePortfolios() {
 
     // Mutations
     createPortfolio: createPortfolioMutation.mutate,
+    createPortfolioMutation,
     updatePortfolio: updatePortfolioMutation.mutate,
     deletePortfolio: deletePortfolioMutation.mutate,
 

@@ -351,11 +351,11 @@ Provide actionable insights for portfolio optimization.
         holdings = context.holdings
         
         # Calculate total value
-        total_value = sum(h.quantity * h.current_price_usd for h in holdings)
+        total_value = sum(h.current_value_usd for h in holdings)
         
         # Format holdings
         holdings_text = "\n".join([
-            f"- {h.crypto_asset.symbol}: {h.quantity:.6f} ({h.quantity * h.current_price_usd / total_value * 100:.1f}%)"
+            f"- {h.crypto_asset.symbol}: {h.quantity:.6f} ({h.current_value_usd / total_value * 100:.1f}%)"
             for h in holdings
         ])
         
@@ -394,13 +394,13 @@ Risk Metrics Summary:
         """Prepare allocation data for rebalancing analysis"""
         
         holdings = context.holdings
-        total_value = sum(h.quantity * h.current_price_usd for h in holdings)
+        total_value = sum(h.current_value_usd for h in holdings)
         
         allocation_lines = []
         for h in holdings:
-            percentage = (h.quantity * h.current_price_usd / total_value) * 100
+            percentage = (h.current_value_usd / total_value) * 100
             allocation_lines.append(
-                f"{h.crypto_asset.symbol}: {percentage:.1f}% (${h.quantity * h.current_price_usd:,.2f})"
+                f"{h.crypto_asset.symbol}: {percentage:.1f}% (${h.current_value_usd:,.2f})"
             )
         
         return "\n".join(allocation_lines)

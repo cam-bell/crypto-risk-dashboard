@@ -155,12 +155,21 @@ export function PortfolioCreationModal({
   }, [existingPortfolios]);
 
   const handleCreatePortfolio = () => {
+    console.log("🎯 PortfolioCreationModal - handleCreatePortfolio called");
+    console.log("📝 Form data:", {
+      name: portfolioName,
+      description: portfolioDescription,
+      selectedAssets: selectedAssets,
+    });
+
     if (!portfolioName.trim()) {
+      console.warn("❌ Portfolio name is empty");
       alert("Please enter a portfolio name");
       return;
     }
 
     if (selectedAssets.length === 0) {
+      console.warn("❌ No assets selected");
       alert("Please select at least one asset");
       return;
     }
@@ -172,11 +181,13 @@ export function PortfolioCreationModal({
       return;
     }
 
+    console.log("🚀 Calling parent onCreatePortfolio function...");
     onCreatePortfolio({
       name: portfolioName.trim(),
       description: portfolioDescription.trim(),
       assets: selectedAssets,
     });
+    console.log("✅ onCreatePortfolio called successfully");
 
     // Reset form
     setPortfolioName("");
