@@ -23,10 +23,23 @@ export function usePortfolios() {
   } = useQuery({
     queryKey: ["portfolios"],
     queryFn: async () => {
-      console.log("🔄 usePortfolios: Fetching portfolios from API...");
-      const result = await apiClient.getPortfolios();
-      console.log("✅ usePortfolios: Received portfolios:", result);
-      return result;
+      console.log("🔍 [usePortfolios] Fetching portfolios from API...");
+      try {
+        // Use the same user_id that we use for creating portfolios
+        const userId = "6abf5032-143e-41b4-a664-bda6e193000d";
+        console.log("👤 [usePortfolios] Fetching portfolios for user:", userId);
+        const result = await apiClient.getPortfolios(userId);
+        console.log("📊 [usePortfolios] Received portfolios:", result);
+        console.log("📊 [usePortfolios] Portfolio count:", result.length);
+        console.log(
+          "📊 [usePortfolios] Portfolio names:",
+          result.map((p) => p.name)
+        );
+        return result;
+      } catch (error) {
+        console.error("❌ [usePortfolios] Error fetching portfolios:", error);
+        throw error;
+      }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes for portfolio list
     gcTime: 15 * 60 * 1000, // 15 minutes
@@ -57,42 +70,283 @@ export function usePortfolios() {
   // Create portfolio mutation
   const createPortfolioMutation = useMutation({
     mutationFn: (data: Partial<Portfolio>) => apiClient.createPortfolio(data),
-    onMutate: async (newPortfolio) => {
+    onSuccess: (newPortfolio) => {
+      // Update the cache with the real portfolio data
+      queryClient.setQueryData(["portfolios"], (old: Portfolio[] = []) => {
+        // Remove any temporary portfolio and add the real one
+        const filteredOld = old.filter((p) => !p.id.startsWith("temp-"));
+        return [...filteredOld, newPortfolio];
+      });
+
+      // Also invalidate to ensure we have the latest data with holdings
+      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+    },
+    onError: (err, newPortfolio) => {
+      // Remove any temporary portfolio on error
+      queryClient.setQueryData(["portfolios"], (old: Portfolio[] = []) =>
+        old.filter((p) => !p.id.startsWith("temp-"))
+      );
+      toast.error("Failed to create portfolio");
+    },
+  });
+
+  // Create portfolio with holdings mutation
+  const createPortfolioWithHoldingsMutation = useMutation({
+    mutationFn: async (data: {
+      name: string;
+      description: string;
+      assets: Array<{
+        asset_id: string;
+        symbol: string;
+        name: string;
+        quantity: number;
+        average_price: number;
+      }>;
+    }) => {
+      console.log(
+        "🚀 [usePortfolios] Starting portfolio creation with data:",
+        data
+      );
+
+      try {
+        // Create portfolio first
+        console.log("📡 [usePortfolios] Creating portfolio...");
+        const portfolio = await apiClient.createPortfolio({
+          name: data.name,
+          description: data.description,
+        });
+        console.log(
+          "✅ [usePortfolios] Portfolio created successfully:",
+          portfolio
+        );
+
+        // Create holdings for each asset using dynamic asset IDs
+        console.log(
+          "🔄 [usePortfolios] Creating holdings for",
+          data.assets.length,
+          "assets"
+        );
+
+        const holdingsResults = [];
+        for (const asset of data.assets) {
+          // Use the asset_id directly as it's the CoinGecko ID
+          const cryptoAssetId = asset.asset_id;
+          if (cryptoAssetId) {
+            console.log(
+              `📦 [usePortfolios] Adding holding for ${asset.name} (${asset.symbol})`
+            );
+            try {
+              const holding = await apiClient.addPortfolioHolding(
+                portfolio.id,
+                {
+                  crypto_asset_id: cryptoAssetId,
+                  quantity: asset.quantity,
+                  average_buy_price_usd: asset.average_price,
+                  notes: `Added via portfolio creation`,
+                }
+              );
+              console.log(
+                `✅ [usePortfolios] Holding created for ${asset.name}:`,
+                holding
+              );
+              holdingsResults.push({
+                success: true,
+                asset: asset.name,
+                holding,
+              });
+            } catch (holdingError: any) {
+              console.error(
+                `❌ [usePortfolios] Error creating holding for ${asset.name}:`,
+                holdingError
+              );
+              holdingsResults.push({
+                success: false,
+                asset: asset.name,
+                error: holdingError,
+              });
+              // Don't throw immediately, collect all errors
+            }
+          } else {
+            console.warn(
+              `⚠️ [usePortfolios] No asset ID mapping found for ${asset.asset_id}`
+            );
+            holdingsResults.push({
+              success: false,
+              asset: asset.name,
+              error: "No asset ID mapping",
+            });
+          }
+        }
+
+        // Check if any holdings failed
+        const failedHoldings = holdingsResults.filter((r) => !r.success);
+        if (failedHoldings.length > 0) {
+          console.error(
+            "❌ [usePortfolios] Some holdings failed to create:",
+            failedHoldings
+          );
+          console.warn(
+            "⚠️ [usePortfolios] Portfolio was created but some holdings failed. Continuing..."
+          );
+          // Don't throw error - portfolio was created successfully, just some holdings failed
+        }
+
+        console.log(
+          "🎉 [usePortfolios] Portfolio creation completed successfully"
+        );
+        return portfolio;
+      } catch (error) {
+        console.error("❌ [usePortfolios] Portfolio creation failed:", error);
+        throw error;
+      }
+    },
+    onMutate: async (newPortfolioData) => {
+      console.log(
+        "🔄 [usePortfolios] onMutate: Starting optimistic update for:",
+        newPortfolioData.name
+      );
+
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["portfolios"] });
 
       // Snapshot previous value
-      const previousPortfolios = queryClient.getQueryData(["portfolios"]);
+      const previousPortfolios = queryClient.getQueryData(["portfolios"]) as
+        | Portfolio[]
+        | undefined;
+      console.log(
+        "📸 [usePortfolios] onMutate: Previous portfolios count:",
+        previousPortfolios?.length || 0
+      );
 
-      // Optimistically update
-      queryClient.setQueryData(["portfolios"], (old: Portfolio[] = []) => [
-        ...old,
-        {
-          id: `temp-${Date.now()}`,
-          ...newPortfolio,
-          total_value_usd: 0,
-          total_invested_usd: 0,
-          total_profit_loss_usd: 0,
-          total_profit_loss_percentage: 0,
-          risk_score: 0,
-          holdings: [],
+      // Create optimistic portfolio with calculated values
+      const totalValue = newPortfolioData.assets.reduce(
+        (sum, asset) => sum + asset.quantity * asset.average_price,
+        0
+      );
+
+      const assetIdMapping: Record<string, string> = {
+        bitcoin: "6abf5032-143e-41b4-a664-bda6e193000d",
+        ethereum: "3d79dad5-e930-4a17-a035-878031e68a6a",
+        cardano: "158c9204-1b0e-4b78-8a39-80ba975a5759",
+        chainlink: "6abf5032-143e-41b4-a664-bda6e193000d", // Use Bitcoin ID as fallback
+        "wrapped-bitcoin": "6abf5032-143e-41b4-a664-bda6e193000d", // Use Bitcoin ID as fallback
+      };
+
+      const optimisticPortfolio: Portfolio = {
+        id: `temp-${Date.now()}`,
+        name: newPortfolioData.name,
+        description: newPortfolioData.description,
+        user_id: "6abf5032-143e-41b4-a664-bda6e193000d",
+        is_default: false,
+        is_public: false,
+        total_value_usd: totalValue,
+        total_invested_usd: totalValue,
+        total_profit_loss_usd: 0,
+        total_profit_loss_percentage: 0,
+        risk_score: 5, // Default medium risk
+        volatility: undefined,
+        sharpe_ratio: undefined,
+        max_drawdown: undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        holdings: newPortfolioData.assets.map((asset) => ({
+          id: `temp-holding-${Date.now()}-${asset.asset_id}`,
+          crypto_asset_id: asset.asset_id, // Use CoinGecko ID directly
+          quantity: asset.quantity,
+          average_buy_price_usd: asset.average_price,
+          total_invested_usd: asset.quantity * asset.average_price,
+          current_value_usd: asset.quantity * asset.average_price,
+          profit_loss_usd: 0,
+          profit_loss_percentage: 0,
+          notes: `Added via portfolio creation`,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        } as Portfolio,
-      ]);
+          crypto_asset: {
+            id: asset.asset_id, // Use CoinGecko ID directly
+            symbol: asset.symbol,
+            name: asset.name,
+            current_price_usd: asset.average_price,
+            market_cap: 0,
+            volume_24h: 0,
+            price_change_24h: 0,
+            price_change_percentage_24h: 0,
+            total_supply: 0,
+            circulating_supply: 0,
+            max_supply: undefined,
+            is_active: true,
+            logo_url: "",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        })),
+      };
+
+      console.log(
+        "🎯 [usePortfolios] onMutate: Created optimistic portfolio:",
+        optimisticPortfolio
+      );
+
+      // Optimistically update
+      queryClient.setQueryData(["portfolios"], (old: Portfolio[] = []) => {
+        const newPortfolios = [...old, optimisticPortfolio];
+        console.log(
+          "📝 [usePortfolios] onMutate: Updated portfolios count:",
+          newPortfolios.length
+        );
+        return newPortfolios;
+      });
 
       return { previousPortfolios };
     },
-    onError: (err, newPortfolio, context) => {
+    onSuccess: (newPortfolio) => {
+      console.log(
+        "✅ [usePortfolios] onSuccess: Portfolio created successfully:",
+        newPortfolio
+      );
+
+      // Update the cache with the real portfolio data
+      queryClient.setQueryData(["portfolios"], (old: Portfolio[] = []) => {
+        // Remove any temporary portfolio and add the real one
+        const filteredOld = old.filter((p) => !p.id.startsWith("temp-"));
+        const updatedPortfolios = [...filteredOld, newPortfolio];
+        console.log(
+          "🔄 [usePortfolios] onSuccess: Updated portfolios count:",
+          updatedPortfolios.length
+        );
+        console.log(
+          "📋 [usePortfolios] onSuccess: Portfolio names:",
+          updatedPortfolios.map((p) => p.name)
+        );
+        return updatedPortfolios;
+      });
+
+      // Wait a moment for database operations to complete, then invalidate
+      setTimeout(() => {
+        console.log(
+          "🔄 [usePortfolios] onSuccess: Invalidating queries to refetch latest data"
+        );
+        queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      }, 2000); // Wait 2 seconds for database operations to complete
+    },
+    onError: (err, newPortfolioData, context) => {
+      console.error(
+        "❌ [usePortfolios] onError: Portfolio creation failed:",
+        err
+      );
+      console.error("❌ [usePortfolios] onError: Error details:", {
+        message: err.message,
+        stack: err.stack,
+        portfolioData: newPortfolioData,
+      });
+
       // Rollback on error
       if (context?.previousPortfolios) {
+        console.log(
+          "🔄 [usePortfolios] onError: Rolling back to previous portfolios"
+        );
         queryClient.setQueryData(["portfolios"], context.previousPortfolios);
       }
-      toast.error("Failed to create portfolio");
-    },
-    onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
+      toast.error(`Failed to create portfolio: ${err.message}`);
     },
   });
 
@@ -248,11 +502,14 @@ export function usePortfolios() {
     // Mutations
     createPortfolio: createPortfolioMutation.mutate,
     createPortfolioMutation,
+    createPortfolioWithHoldings: createPortfolioWithHoldingsMutation.mutate,
+    createPortfolioWithHoldingsMutation,
     updatePortfolio: updatePortfolioMutation.mutate,
     deletePortfolio: deletePortfolioMutation.mutate,
 
     // Mutation states
     isCreating: createPortfolioMutation.isPending,
+    isCreatingWithHoldings: createPortfolioWithHoldingsMutation.isPending,
     isUpdating: updatePortfolioMutation.isPending,
     isDeleting: deletePortfolioMutation.isPending,
 

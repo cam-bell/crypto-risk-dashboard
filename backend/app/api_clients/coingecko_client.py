@@ -84,42 +84,36 @@ class CoinGeckoClient(BaseAPIClient):
     async def get_coins_by_category(
         self, category: str, vs_currency: str = "usd", per_page: int = 100
     ) -> APIResponse:
-        """Get coins by category using predefined coin lists"""
-        # Define popular coins for each category
-        category_coins = {
-            "defi": [
-                "uniswap", "aave", "compound-governance-token", "maker", 
-                "curve-dao-token", "sushiswap", "yearn-finance", "1inch",
-                "pancakeswap-token", "synthetix-network-token", "compound-ether",
-                "compound-usd-coin", "compound-usdt", "compound-basic-attention-token"
-            ],
-            "layer1": [
-                "bitcoin", "ethereum", "cardano", "solana", "avalanche-2",
-                "polkadot", "cosmos", "algorand", "near", "fantom",
-                "elrond-erd-2", "hedera-hashgraph", "tezos", "stellar"
-            ],
-            "layer2": [
-                "polygon", "optimism", "arbitrum", "immutable-x", "loopring",
-                "matic-network", "skale", "omg", "zksync", "starknet"
-            ],
-            "meme": [
-                "dogecoin", "shiba-inu", "pepe", "floki", "bonk", "doge",
-                "baby-doge-coin", "dogelon-mars", "shiba-inu", "safe-moon"
-            ],
-            "gaming": [
-                "axie-infinity", "the-sandbox", "decentraland", "enjincoin",
-                "gala", "illuvium", "star-atlas", "splinterlands", "alien-worlds",
-                "my-neighbor-alice", "crypto-blades", "mobox"
-            ],
-            "stablecoin": [
-                "tether", "usd-coin", "dai", "binance-usd", "true-usd",
-                "frax", "liquity-usd", "magic-internet-money", "fei-usd",
-                "reserve-rights-token", "neutrino-usd", "stasis-eurs"
-            ]
+        """Get coins by category using CoinGecko category IDs"""
+        # Map frontend category names to CoinGecko category IDs
+        category_mapping = {
+            "defi": "decentralized-finance-defi",
+            "ai": "artificial-intelligence",
+            "layer-2": "layer-2",
+            "l2": "layer-2",
+            "meme": "meme-token",
+            "memes": "meme-token",
+            "stablecoin": "stablecoins",
+            "stablecoins": "stablecoins",
+            "rwa": "real-world-assets-rwa",
+            "gaming": "gaming",
+            "layer1": "layer-1",
+            "l1": "layer-1",
+            "smart-contract": "smart-contract-platform",
+            "pow": "proof-of-work-pow",
+            "pos": "proof-of-stake-pos"
         }
-        
-        coin_ids = category_coins.get(category, [])
-        if not coin_ids:
+
+        # Get the CoinGecko category ID
+        coingecko_category_id = category_mapping.get(category.lower())
+        if coingecko_category_id:
+            # Use the proper category endpoint
+            return await self.get_coins_by_category_id(
+                category_id=coingecko_category_id,
+                vs_currency=vs_currency,
+                per_page=per_page
+            )
+        else:
             # For unknown categories, return top coins
             return await self.get_coin_market_data(
                 coin_ids=[],
@@ -127,14 +121,6 @@ class CoinGeckoClient(BaseAPIClient):
                 order="market_cap_desc",
                 per_page=per_page
             )
-        
-        # Get market data for category-specific coins
-        return await self.get_coin_market_data(
-            coin_ids=coin_ids[:per_page],
-            vs_currency=vs_currency,
-            order="market_cap_desc",
-            per_page=per_page
-        )
 
     async def get_trending_coins_detailed(
         self, vs_currency: str = "usd"
@@ -144,15 +130,15 @@ class CoinGeckoClient(BaseAPIClient):
         trending_response = await self.get_trending_coins()
         if not trending_response.success:
             return trending_response
-        
+
         # Extract coin IDs from trending response
         trending_data = trending_response.data or {}
         trending_coins = trending_data.get("coins", [])
         coin_ids = [coin["item"]["id"] for coin in trending_coins[:50]]
-        
+
         if not coin_ids:
             return APIResponse(success=False, error="No trending coins found")
-        
+
         # Get detailed market data for trending coins
         return await self.get_coin_market_data(
             coin_ids=coin_ids,
@@ -171,3 +157,26 @@ class CoinGeckoClient(BaseAPIClient):
             order="market_cap_desc",
             per_page=per_page
         )
+
+    async def get_categories(
+        self, order: str = "market_cap_desc"
+    ) -> APIResponse:
+        """Get cryptocurrency categories with market data"""
+        params = {"order": order}
+        return await self._make_request(
+            "GET", "coins/categories", params=params
+        )
+
+    async def get_coins_by_category_id(
+        self, category_id: str, vs_currency: str = "usd", per_page: int = 100
+    ) -> APIResponse:
+        """Get coins by specific category ID from CoinGecko"""
+        params = {
+            "vs_currency": vs_currency,
+            "category": category_id,
+            "order": "market_cap_desc",
+            "per_page": per_page,
+            "page": 1,
+            "sparkline": "false"
+        }
+        return await self._make_request("GET", "coins/markets", params=params)

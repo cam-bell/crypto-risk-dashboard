@@ -8,6 +8,7 @@ from app.schemas.crypto_asset import (
     CryptoAssetListResponse
 )
 from app.api_clients.coingecko_client import CoinGeckoClient
+from app.services.asset_sync_service import asset_sync_service
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,22 +40,28 @@ async def get_crypto_assets(
         coingecko_client = CoinGeckoClient()
         assets_data = []
         
-        # Use CoinGecko API for real-time data
+        # Use CoinGecko API for real-time data and sync to database
         async with coingecko_client as client:
-            if category == "top" or category is None:
-                # Get top coins by market cap
+            if category is None:
+                # Default to all coins
                 response = await client.get_top_coins(per_page=limit)
             elif category == "trending":
                 # Get trending coins
                 response = await client.get_trending_coins_detailed()
-            elif category in ["defi", "layer1", "layer2", "meme", "gaming", "stablecoin"]:
-                # Get coins by category
-                response = await client.get_coins_by_category(category, per_page=limit)
-            else:
-                # Default to top coins
+            elif category == "all":
+                # Get top coins for "all" category
                 response = await client.get_top_coins(per_page=limit)
+            else:
+                # Use the category mapping system
+                response = await client.get_coins_by_category(category, per_page=limit)
             
             if response.success and response.data:
+                # Sync assets to database to ensure they exist for portfolio creation
+                coin_ids = [coin_data.get("id") for coin_data in response.data if coin_data.get("id")]
+                if coin_ids:
+                    sync_result = await asset_sync_service.ensure_assets_exist(db, coin_ids)
+                    print(f"🔄 [CryptoAssets] Asset sync result: {sync_result}")
+                
                 # Convert CoinGecko data to our format
                 for coin_data in response.data:
                     asset = {
@@ -307,18 +314,62 @@ async def get_crypto_asset_price_history(
 @router.get("/categories/list")
 async def get_crypto_categories():
     """
-    Get list of available cryptocurrency categories
+    Get list of available cryptocurrency categories from CoinGecko API
     """
-    return {
-        "categories": [
-            {"id": "all", "name": "All", "description": "All cryptocurrencies"},
-            {"id": "top", "name": "Top by Market Cap", "description": "Largest cryptocurrencies"},
-            {"id": "trending", "name": "Trending", "description": "High volume & price movement"},
-            {"id": "defi", "name": "DeFi", "description": "Decentralized Finance"},
-            {"id": "layer1", "name": "Layer 1", "description": "Base blockchain protocols"},
-            {"id": "layer2", "name": "Layer 2", "description": "Scaling solutions"},
-            {"id": "meme", "name": "Meme Coins", "description": "Community-driven tokens"},
-            {"id": "gaming", "name": "Gaming", "description": "Gaming & NFT tokens"},
-            {"id": "stablecoin", "name": "Stablecoins", "description": "Price-stable cryptocurrencies"},
-        ]
-    }
+    try:
+        coingecko_client = CoinGeckoClient()
+        
+        async with coingecko_client as client:
+            response = await client.get_categories()
+            
+            if response.success and response.data:
+                # Add special categories
+                categories = [
+                    {"id": "all", "name": "All", "description": "All cryptocurrencies"},
+                    {"id": "trending", "name": "Trending", "description": "High volume & price movement"},
+                ]
+                
+                # Add dynamic categories from CoinGecko (limit to top 5 for testing)
+                for category_data in response.data[:5]:
+                    categories.append({
+                        "id": category_data.get("id", ""),
+                        "name": category_data.get("name", ""),
+                        "description": category_data.get("content", ""),
+                        "market_cap": category_data.get("market_cap", 0),
+                        "market_cap_change_24h": category_data.get("market_cap_change_24h", 0),
+                        "volume_24h": category_data.get("volume_24h", 0),
+                        "top_3_coins": category_data.get("top_3_coins", []),
+                        "updated_at": category_data.get("updated_at", "")
+                    })
+                
+                return {"categories": categories}
+        
+        # Fallback to static categories if API fails
+        return {
+            "categories": [
+                {"id": "all", "name": "All", "description": "All cryptocurrencies"},
+                {"id": "top", "name": "Top by Market Cap", "description": "Largest cryptocurrencies"},
+                {"id": "trending", "name": "Trending", "description": "High volume & price movement"},
+                {"id": "smart-contract-platform", "name": "Smart Contract Platform", "description": "Blockchain platforms with smart contract capabilities"},
+                {"id": "world-liberty-financial-portfolio", "name": "World Liberty Financial Portfolio", "description": "Financial freedom focused cryptocurrencies"},
+                {"id": "made-in-usa", "name": "Made in USA", "description": "US-based cryptocurrency projects"},
+                {"id": "alleged-sec-securities", "name": "Alleged SEC Securities", "description": "Cryptocurrencies under SEC scrutiny"},
+                {"id": "stablecoins", "name": "Stablecoins", "description": "Price-stable cryptocurrencies"},
+                {"id": "exchange-based-tokens", "name": "Exchange-based Tokens", "description": "Tokens issued by cryptocurrency exchanges"},
+                {"id": "decentralized-finance-defi", "name": "Decentralized Finance (DeFi)", "description": "Decentralized financial protocols"},
+                {"id": "meme", "name": "Meme", "description": "Community-driven meme tokens"},
+                {"id": "real-world-assets-rwa", "name": "Real World Assets (RWA)", "description": "Tokens backed by real-world assets"},
+                {"id": "governance", "name": "Governance", "description": "Governance and voting tokens"},
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching crypto categories: {e}")
+        # Return fallback categories
+        return {
+            "categories": [
+                {"id": "all", "name": "All", "description": "All cryptocurrencies"},
+                {"id": "top", "name": "Top by Market Cap", "description": "Largest cryptocurrencies"},
+                {"id": "trending", "name": "Trending", "description": "High volume & price movement"},
+            ]
+        }

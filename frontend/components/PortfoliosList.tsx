@@ -4,7 +4,7 @@ import { useState } from "react";
 import { usePortfolios } from "@/hooks/usePortfolios";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { PortfolioCreationModal } from "./PortfolioCreationModal";
+import { PortfolioCreateDrawer } from "./portfolio-creation/PortfolioCreateDrawer";
 import {
   MetricCardSkeleton,
   PortfolioCardSkeleton,
@@ -17,6 +17,7 @@ import {
   ArrowRight,
   Plus,
 } from "lucide-react";
+import { getRiskGradientClass, getRiskLabel } from "@/lib/colors";
 
 export function PortfoliosList() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -28,8 +29,9 @@ export function PortfoliosList() {
     getPortfolioStats,
     getTopPerformers,
     getHighestRisk,
-    createPortfolioMutation,
-    isCreating,
+    createPortfolioWithHoldingsMutation,
+    isCreatingWithHoldings,
+    refetch,
   } = usePortfolios();
 
   const portfolioStats = getPortfolioStats();
@@ -53,118 +55,75 @@ export function PortfoliosList() {
       average_price: number;
     }>;
   }) => {
-    console.log("🚀 handleCreatePortfolio called with:", portfolioData);
+    console.log(
+      "🚀 [PortfoliosList] handleCreatePortfolio called with:",
+      portfolioData
+    );
+
     try {
-      // Create the portfolio using the API
-      console.log("📡 Calling createPortfolio...");
-      const createdPortfolio = await createPortfolioMutation.mutateAsync({
-        name: portfolioData.name,
-        description: portfolioData.description,
-        // Backend will set these values automatically
-      });
+      // Use the new mutation that handles both portfolio and holdings creation
+      console.log("📡 [PortfoliosList] Calling createPortfolioWithHoldings...");
+      const createdPortfolio =
+        await createPortfolioWithHoldingsMutation.mutateAsync(portfolioData);
 
-      console.log("✅ Portfolio created successfully:", createdPortfolio);
+      console.log(
+        "✅ [PortfoliosList] Portfolio with holdings created successfully:",
+        createdPortfolio
+      );
 
-      // Create holdings for each asset
-      for (const asset of portfolioData.assets) {
-        const cryptoAssetId = assetIdMapping[asset.asset_id];
+      // Wait a moment for the cache to update
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        if (!cryptoAssetId) {
-          console.warn(`Asset ID ${asset.asset_id} not found in mapping`);
-          continue;
-        }
-
-        try {
-          console.log(`🔄 Adding holding for ${asset.name}:`, {
-            portfolioId: createdPortfolio.id,
-            cryptoAssetId,
-            quantity: asset.quantity,
-            average_price: asset.average_price,
-          });
-
-          // We need to get the holdings hook for this portfolio
-          // For now, we'll use the API client directly
-          const { apiClient } = await import("@/lib/api");
-          const holdingResult = await apiClient.addPortfolioHolding(
-            createdPortfolio.id,
-            {
-              crypto_asset_id: cryptoAssetId,
-              quantity: asset.quantity,
-              average_buy_price_usd: asset.average_price,
-              notes: `Added via portfolio creation`,
-            }
-          );
-
-          console.log(
-            `✅ Holding created successfully for ${asset.name}:`,
-            holdingResult
-          );
-        } catch (holdingError) {
-          console.error(
-            `❌ Error creating holding for ${asset.name}:`,
-            holdingError
-          );
-        }
-      }
-
-      // Invalidate cache to refresh portfolio data with holdings
-      console.log("🔄 Invalidating React Query cache...");
-      queryClient.invalidateQueries({ queryKey: ["portfolios"] });
-      console.log("✅ Cache invalidated, should trigger refetch");
+      // Force a refetch to ensure we have the latest data
+      console.log("🔄 [PortfoliosList] Forcing refetch of portfolios...");
+      await refetch();
 
       // Show success message
       alert(
         `Portfolio "${portfolioData.name}" created successfully with ${portfolioData.assets.length} assets!`
       );
-    } catch (error) {
-      console.error("❌ Outer catch - Error creating portfolio:", error);
-      alert("Failed to create portfolio. Please try again.");
+    } catch (error: any) {
+      console.error("❌ [PortfoliosList] Error creating portfolio:", error);
+      console.error("❌ [PortfoliosList] Error details:", {
+        message: error?.message || "Unknown error",
+        stack: error?.stack,
+        portfolioData,
+      });
+      alert(`Failed to create portfolio: ${error?.message || "Unknown error"}`);
     }
   };
 
-  const getRiskColor = (riskScore: number) => {
-    if (riskScore <= 3) return "text-green-600 bg-green-100 dark:bg-green-900";
-    if (riskScore <= 6)
-      return "text-yellow-600 bg-yellow-100 dark:bg-yellow-900";
-    if (riskScore <= 8)
-      return "text-orange-600 bg-orange-100 dark:bg-orange-900";
-    return "text-red-600 bg-red-100 dark:bg-red-900";
-  };
-
-  const getRiskLabel = (riskScore: number) => {
-    if (riskScore <= 3) return "Low";
-    if (riskScore <= 6) return "Medium";
-    if (riskScore <= 8) return "High";
-    return "Critical";
-  };
+  // Remove old risk functions as they're now imported from colors.ts
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Enhanced Header with Gradient */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Portfolios
-              </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <h1 className="text-3xl font-bold text-white mb-2">Portfolios</h1>
+              <p className="text-violet-100 text-lg">
                 Manage and monitor your cryptocurrency portfolios
               </p>
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+              className="btn-gradient-secondary hover:shadow-glow-purple transition-all duration-300 px-6 py-3 rounded-xl flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              disabled={isCreatingWithHoldings}
             >
-              <Plus className="w-4 h-4" />
-              <span>New Portfolio</span>
+              <Plus className="w-5 h-5" />
+              <span>
+                {isCreatingWithHoldings ? "Creating..." : "New Portfolio"}
+              </span>
             </button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Portfolio Summary Stats */}
+        {/* Enhanced Portfolio Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {portfoliosLoading ? (
             <>
@@ -174,48 +133,51 @@ export function PortfoliosList() {
             </>
           ) : (
             <>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <Wallet className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="card-gradient group relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500/10 to-blue-500/10 backdrop-blur-sm border border-white/20 hover:border-violet-400/50 transition-all duration-300 hover:scale-105 p-6">
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative z-10 flex items-center">
+                  <div className="p-3 bg-gradient-to-br from-violet-500/20 to-blue-500/20 rounded-xl">
+                    <Wallet className="w-6 h-6 text-violet-600 dark:text-violet-400" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                       Total Portfolios
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
                       {portfolios.length}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div className="card-gradient group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/10 to-green-500/10 backdrop-blur-sm border border-white/20 hover:border-emerald-400/50 transition-all duration-300 hover:scale-105 p-6">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative z-10 flex items-center">
+                  <div className="p-3 bg-gradient-to-br from-emerald-500/20 to-green-500/20 rounded-xl">
+                    <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                       Total Value
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
                       ${portfolioStats?.totalValue.toLocaleString() || "0"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                    <Shield className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <div className="card-gradient group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-sm border border-white/20 hover:border-amber-400/50 transition-all duration-300 hover:scale-105 p-6">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative z-10 flex items-center">
+                  <div className="p-3 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl">
+                    <Shield className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                       Avg Risk Score
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
                       {portfolioStats?.avgRiskScore.toFixed(1) || "N/A"}
                     </p>
                   </div>
@@ -241,127 +203,148 @@ export function PortfoliosList() {
                   const riskLevel = getRiskLabel(riskScore);
 
                   return (
-                    <Link
+                    <div
                       key={portfolio.id}
-                      href={`/portfolios/${portfolio.id}`}
-                      className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow p-6"
+                      className="card-glass group relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 hover:border-violet-400/50 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-violet-500/10 p-6"
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                            {portfolio.name}
-                          </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {portfolio.holdings.length} assets
-                          </p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-gray-400" />
-                      </div>
+                      {/* Gradient overlay on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-                      <div className="space-y-3">
-                        {/* Portfolio Value */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            Total Value
-                          </span>
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            ${(portfolio.total_value_usd || 0).toLocaleString()}
-                          </span>
-                        </div>
-
-                        {/* Risk Score */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            Risk Level
-                          </span>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskColor(
-                              riskScore
-                            )}`}
-                          >
-                            {riskLevel}
-                          </span>
-                        </div>
-
-                        {/* Performance */}
-                        {portfolio.total_profit_loss_percentage !==
-                          undefined && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              24h P&L
-                            </span>
-                            <span
-                              className={`font-semibold ${
-                                (portfolio.total_profit_loss_percentage || 0) >=
-                                0
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              {(portfolio.total_profit_loss_percentage || 0) >=
-                              0
-                                ? "+"
-                                : ""}
-                              {(
-                                portfolio.total_profit_loss_percentage || 0
-                              ).toFixed(2)}
-                              %
-                            </span>
+                      {/* Card content with enhanced styling */}
+                      <div className="relative z-10">
+                        {/* Header with portfolio name and arrow */}
+                        <Link
+                          href={`/portfolios/${portfolio.id}`}
+                          className="block"
+                        >
+                          <div className="flex items-start justify-between mb-6">
+                            <div>
+                              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-violet-300 transition-colors">
+                                {portfolio.name}
+                              </h3>
+                              <p className="text-sm text-slate-400">
+                                {portfolio.holdings.length} assets
+                              </p>
+                            </div>
+                            <div className="p-2 rounded-full bg-slate-700/50 group-hover:bg-violet-500/20 transition-colors">
+                              <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-violet-400 transition-colors" />
+                            </div>
                           </div>
-                        )}
-                      </div>
 
-                      {/* Quick Actions */}
-                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <div className="flex space-x-2">
-                          <Link
-                            href={`/portfolios/${portfolio.id}/risk`}
-                            className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Risk Analysis
-                          </Link>
-                          <span className="text-gray-300">•</span>
-                          <Link
-                            href={`/portfolios/${portfolio.id}/insights`}
-                            className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            AI Insights
-                          </Link>
+                          {/* Metrics with enhanced styling */}
+                          <div className="space-y-4">
+                            {/* Total Value with large, prominent display */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-slate-400">
+                                Total Value
+                              </span>
+                              <span className="text-2xl font-bold text-white">
+                                $
+                                {(
+                                  portfolio.total_value_usd || 0
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+
+                            {/* Risk Level with gradient badge */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-slate-400">
+                                Risk Level
+                              </span>
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-semibold ${getRiskGradientClass(riskScore)}`}
+                              >
+                                {riskLevel}
+                              </span>
+                            </div>
+
+                            {/* Performance with trend indicator */}
+                            {portfolio.total_profit_loss_percentage !==
+                              undefined && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-slate-400">
+                                  24h P&L
+                                </span>
+                                <div className="flex items-center space-x-2">
+                                  <TrendingUp
+                                    className={`w-4 h-4 ${(portfolio.total_profit_loss_percentage || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                                  />
+                                  <span
+                                    className={`font-semibold ${(portfolio.total_profit_loss_percentage || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                                  >
+                                    {(portfolio.total_profit_loss_percentage ||
+                                      0) >= 0
+                                      ? "+"
+                                      : ""}
+                                    {(
+                                      portfolio.total_profit_loss_percentage ||
+                                      0
+                                    ).toFixed(2)}
+                                    %
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+
+                        {/* Action buttons with enhanced styling */}
+                        <div className="mt-6 pt-4 border-t border-slate-700/50">
+                          <div className="flex space-x-4">
+                            <Link
+                              href={`/portfolios/${portfolio.id}/risk`}
+                              className="flex-1 text-center px-4 py-2 rounded-lg bg-gradient-to-r from-violet-500/20 to-blue-500/20 border border-violet-500/30 text-violet-300 hover:from-violet-500/30 hover:to-blue-500/30 hover:border-violet-400/50 transition-all duration-300 text-sm font-medium"
+                            >
+                              Risk Analysis
+                            </Link>
+                            <Link
+                              href={`/portfolios/${portfolio.id}/insights`}
+                              className="flex-1 text-center px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-300 hover:from-purple-500/30 hover:to-pink-500/30 hover:border-purple-400/50 transition-all duration-300 text-sm font-medium"
+                            >
+                              AI Insights
+                            </Link>
+                          </div>
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Wallet className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  No portfolios yet
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-6">
-                  Create your first portfolio to start monitoring your crypto
-                  investments
-                </p>
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg"
-                >
-                  Create Portfolio
-                </button>
+              <div className="text-center py-16">
+                <div className="card-glass relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-xl border border-slate-700/30 p-12 max-w-md mx-auto">
+                  <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-blue-500/5"></div>
+                  <div className="relative z-10">
+                    <div className="p-4 bg-gradient-to-br from-violet-500/20 to-blue-500/20 rounded-2xl w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                      <Wallet className="w-10 h-10 text-violet-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-3">
+                      No portfolios yet
+                    </h3>
+                    <p className="text-slate-400 mb-8">
+                      Create your first portfolio to start monitoring your
+                      crypto investments
+                    </p>
+                    <button
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="btn-gradient-secondary hover:shadow-glow-purple transition-all duration-300 px-8 py-3 rounded-xl font-medium"
+                    >
+                      Create Portfolio
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </>
         )}
       </div>
 
-      {/* Portfolio Creation Modal */}
-      <PortfolioCreationModal
+      {/* Portfolio Creation Drawer */}
+      <PortfolioCreateDrawer
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreatePortfolio={handleCreatePortfolio}
+        existingPortfolios={portfolios}
       />
     </div>
   );

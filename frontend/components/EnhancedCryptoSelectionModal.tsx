@@ -1,16 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import {
-  X,
-  Plus,
-  Trash2,
-  Search,
-  TrendingUp,
-  Star,
-  Filter,
-  ChevronDown,
-} from "lucide-react";
+import { X, Plus, Trash2, Search, TrendingUp, Filter } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getCoinsByCategory, searchCoins } from "@/lib/server-actions";
 import { CryptoAsset } from "@/types";
@@ -40,32 +31,13 @@ interface CryptoCategory {
   description: string;
 }
 
-const CRYPTO_CATEGORIES: CryptoCategory[] = [
+// Dynamic categories will be fetched from API
+const DEFAULT_CATEGORIES: CryptoCategory[] = [
   { id: "all", name: "All", description: "All cryptocurrencies" },
-  {
-    id: "top",
-    name: "Top by Market Cap",
-    description: "Largest cryptocurrencies",
-  },
   {
     id: "trending",
     name: "Trending",
     description: "High volume & price movement",
-  },
-  {
-    id: "recommended",
-    name: "Recommended",
-    description: "Based on your existing holdings",
-  },
-  { id: "defi", name: "DeFi", description: "Decentralized Finance" },
-  { id: "layer1", name: "Layer 1", description: "Base blockchain protocols" },
-  { id: "layer2", name: "Layer 2", description: "Scaling solutions" },
-  { id: "meme", name: "Meme Coins", description: "Community-driven tokens" },
-  { id: "gaming", name: "Gaming", description: "Gaming & NFT tokens" },
-  {
-    id: "stablecoin",
-    name: "Stablecoins",
-    description: "Price-stable cryptocurrencies",
   },
 ];
 
@@ -83,11 +55,13 @@ export function EnhancedCryptoSelectionModal({
   existingHoldings = [],
 }: EnhancedCryptoSelectionModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("top");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedMarketCap, setSelectedMarketCap] = useState("all");
   const [cryptoAssets, setCryptoAssets] = useState<CryptoAsset[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] =
+    useState<CryptoCategory[]>(DEFAULT_CATEGORIES);
   const [selectedAssets, setSelectedAssets] = useState<
     Array<{
       asset_id: string;
@@ -106,8 +80,8 @@ export function EnhancedCryptoSelectionModal({
     if (holdings.length === 0) {
       // If no existing holdings, recommend top diversified assets
       return assets
-        .filter((asset) => asset.market_cap > 1000000000) // Only large cap
-        .sort((a, b) => b.market_cap - a.market_cap)
+        .filter((asset) => (asset.market_cap || 0) > 1000000000) // Only large cap
+        .sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0))
         .slice(0, 20);
     }
 
@@ -208,17 +182,31 @@ export function EnhancedCryptoSelectionModal({
       const topAssets = assets
         .filter(
           (asset) =>
-            asset.market_cap > 1000000000 &&
+            (asset.market_cap || 0) > 1000000000 &&
             !existingSymbols.has(asset.symbol.toLowerCase()) &&
             !recommendations.find((r) => r.id === asset.id)
         )
-        .sort((a, b) => b.market_cap - a.market_cap)
+        .sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0))
         .slice(0, 10 - recommendations.length);
 
       recommendations.push(...topAssets);
     }
 
     return recommendations.slice(0, 20); // Limit to 20 recommendations
+  };
+
+  // Fetch categories from API
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("/api/v1/crypto-assets/categories/list");
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.categories || DEFAULT_CATEGORIES);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      // Keep default categories on error
+    }
   };
 
   // Fetch crypto assets based on category using server actions
@@ -229,6 +217,9 @@ export function EnhancedCryptoSelectionModal({
       setCryptoAssets([]);
       return;
     }
+
+    // Fetch categories when modal opens
+    fetchCategories();
 
     const fetchCryptoAssets = async () => {
       setLoading(true);
@@ -272,7 +263,7 @@ export function EnhancedCryptoSelectionModal({
       id: "bitcoin",
       symbol: "BTC",
       name: "Bitcoin",
-      current_price: 45000,
+      current_price_usd: 45000,
       price_change_24h: -500,
       price_change_percentage_24h: -1.1,
       market_cap: 850000000000,
@@ -280,14 +271,15 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 19500000,
       total_supply: 21000000,
       max_supply: 21000000,
-      image: "https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
-      last_updated: new Date().toISOString(),
+      logo_url: "https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "ethereum",
       symbol: "ETH",
       name: "Ethereum",
-      current_price: 2800,
+      current_price_usd: 2800,
       price_change_24h: 50,
       price_change_percentage_24h: 1.8,
       market_cap: 340000000000,
@@ -295,14 +287,16 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 120000000,
       total_supply: 0,
       max_supply: 0,
-      image: "https://assets.coingecko.com/coins/images/279/large/ethereum.png",
-      last_updated: new Date().toISOString(),
+      logo_url:
+        "https://assets.coingecko.com/coins/images/279/large/ethereum.png",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "ripple",
       symbol: "XRP",
       name: "XRP",
-      current_price: 0.55,
+      current_price_usd: 0.55,
       price_change_24h: 0.02,
       price_change_percentage_24h: 3.8,
       market_cap: 30000000000,
@@ -310,15 +304,16 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 55000000000,
       total_supply: 100000000000,
       max_supply: 100000000000,
-      image:
+      logo_url:
         "https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png",
-      last_updated: new Date().toISOString(),
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "cardano",
       symbol: "ADA",
       name: "Cardano",
-      current_price: 0.45,
+      current_price_usd: 0.45,
       price_change_24h: -0.02,
       price_change_percentage_24h: -4.3,
       market_cap: 15000000000,
@@ -326,30 +321,33 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 35000000000,
       total_supply: 45000000000,
       max_supply: 45000000000,
-      image:
+      logo_url:
         "https://assets.coingecko.com/coins/images/975/large/Cardano_Logo.png",
-      last_updated: new Date().toISOString(),
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "solana",
       symbol: "SOL",
       name: "Solana",
-      current_price: 95,
+      current_price_usd: 95,
       price_change_24h: 3,
       price_change_percentage_24h: 3.3,
       market_cap: 40000000000,
       volume_24h: 3000000000,
       circulating_supply: 420000000,
       total_supply: 500000000,
-      max_supply: null,
-      image: "https://assets.coingecko.com/coins/images/4128/large/solana.png",
-      last_updated: new Date().toISOString(),
+      max_supply: undefined,
+      logo_url:
+        "https://assets.coingecko.com/coins/images/4128/large/solana.png",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "polygon",
       symbol: "MATIC",
       name: "Polygon",
-      current_price: 0.85,
+      current_price_usd: 0.85,
       price_change_24h: -0.05,
       price_change_percentage_24h: -5.6,
       market_cap: 8000000000,
@@ -357,15 +355,16 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 9500000000,
       total_supply: 10000000000,
       max_supply: 10000000000,
-      image:
+      logo_url:
         "https://assets.coingecko.com/coins/images/4713/large/matic-token-icon.png",
-      last_updated: new Date().toISOString(),
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "dogecoin",
       symbol: "DOGE",
       name: "Dogecoin",
-      current_price: 0.08,
+      current_price_usd: 0.08,
       price_change_24h: 0.002,
       price_change_percentage_24h: 2.5,
       market_cap: 12000000000,
@@ -373,14 +372,16 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 150000000000,
       total_supply: 0,
       max_supply: 0,
-      image: "https://assets.coingecko.com/coins/images/5/large/dogecoin.png",
-      last_updated: new Date().toISOString(),
+      logo_url:
+        "https://assets.coingecko.com/coins/images/5/large/dogecoin.png",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "avalanche",
       symbol: "AVAX",
       name: "Avalanche",
-      current_price: 25,
+      current_price_usd: 25,
       price_change_24h: -0.5,
       price_change_percentage_24h: -2.0,
       market_cap: 6000000000,
@@ -388,15 +389,16 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 240000000,
       total_supply: 720000000,
       max_supply: 720000000,
-      image:
+      logo_url:
         "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png",
-      last_updated: new Date().toISOString(),
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "chainlink",
       symbol: "LINK",
       name: "Chainlink",
-      current_price: 12,
+      current_price_usd: 12,
       price_change_24h: 0.3,
       price_change_percentage_24h: 2.6,
       market_cap: 7000000000,
@@ -404,15 +406,16 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 583000000,
       total_supply: 1000000000,
       max_supply: 1000000000,
-      image:
+      logo_url:
         "https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png",
-      last_updated: new Date().toISOString(),
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "uniswap",
       symbol: "UNI",
       name: "Uniswap",
-      current_price: 6.5,
+      current_price_usd: 6.5,
       price_change_24h: -0.2,
       price_change_percentage_24h: -3.0,
       market_cap: 4000000000,
@@ -420,15 +423,16 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 615000000,
       total_supply: 1000000000,
       max_supply: 1000000000,
-      image:
+      logo_url:
         "https://assets.coingecko.com/coins/images/12504/large/uniswap-uni.png",
-      last_updated: new Date().toISOString(),
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "litecoin",
       symbol: "LTC",
       name: "Litecoin",
-      current_price: 70,
+      current_price_usd: 70,
       price_change_24h: 1.5,
       price_change_percentage_24h: 2.2,
       market_cap: 5000000000,
@@ -436,14 +440,16 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 74000000,
       total_supply: 84000000,
       max_supply: 84000000,
-      image: "https://assets.coingecko.com/coins/images/2/large/litecoin.png",
-      last_updated: new Date().toISOString(),
+      logo_url:
+        "https://assets.coingecko.com/coins/images/2/large/litecoin.png",
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
     {
       id: "polkadot",
       symbol: "DOT",
       name: "Polkadot",
-      current_price: 5.2,
+      current_price_usd: 5.2,
       price_change_24h: -0.1,
       price_change_percentage_24h: -1.9,
       market_cap: 6000000000,
@@ -451,9 +457,10 @@ export function EnhancedCryptoSelectionModal({
       circulating_supply: 1150000000,
       total_supply: 0,
       max_supply: 0,
-      image:
+      logo_url:
         "https://assets.coingecko.com/coins/images/12171/large/polkadot.png",
-      last_updated: new Date().toISOString(),
+      is_active: true,
+      created_at: "2024-01-01T00:00:00Z",
     },
   ];
 
@@ -467,7 +474,8 @@ export function EnhancedCryptoSelectionModal({
       if (filter) {
         filtered = filtered.filter(
           (asset) =>
-            asset.market_cap >= filter.min && asset.market_cap <= filter.max
+            (asset.market_cap || 0) >= filter.min &&
+            (asset.market_cap || 0) <= filter.max
         );
       }
     }
@@ -486,50 +494,8 @@ export function EnhancedCryptoSelectionModal({
     if (selectedCategory === "recommended") {
       // Smart recommendations based on existing holdings
       filtered = getSmartRecommendations(filtered, existingHoldings);
-    } else if (selectedCategory === "defi") {
-      // This would ideally come from API, but for now we'll use a simple filter
-      const defiKeywords = [
-        "uni",
-        "aave",
-        "compound",
-        "maker",
-        "curve",
-        "sushi",
-        "yearn",
-      ];
-      filtered = filtered.filter((asset) =>
-        defiKeywords.some(
-          (keyword) =>
-            asset.name.toLowerCase().includes(keyword) ||
-            asset.symbol.toLowerCase().includes(keyword)
-        )
-      );
-    } else if (selectedCategory === "layer1") {
-      const layer1Keywords = [
-        "bitcoin",
-        "ethereum",
-        "cardano",
-        "solana",
-        "avalanche",
-        "polkadot",
-      ];
-      filtered = filtered.filter((asset) =>
-        layer1Keywords.some(
-          (keyword) =>
-            asset.name.toLowerCase().includes(keyword) ||
-            asset.symbol.toLowerCase().includes(keyword)
-        )
-      );
-    } else if (selectedCategory === "meme") {
-      const memeKeywords = ["dogecoin", "shiba", "pepe", "floki", "bonk"];
-      filtered = filtered.filter((asset) =>
-        memeKeywords.some(
-          (keyword) =>
-            asset.name.toLowerCase().includes(keyword) ||
-            asset.symbol.toLowerCase().includes(keyword)
-        )
-      );
     }
+    // Note: Other category filtering is now handled by the API
 
     return filtered;
   }, [
@@ -553,7 +519,7 @@ export function EnhancedCryptoSelectionModal({
           symbol: asset.symbol,
           name: asset.name,
           quantity: 0,
-          average_price: asset.current_price,
+          average_price: asset.current_price_usd || 0,
         },
       ]);
     }
@@ -638,7 +604,7 @@ export function EnhancedCryptoSelectionModal({
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
-                {CRYPTO_CATEGORIES.map((category) => (
+                {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
@@ -711,7 +677,7 @@ export function EnhancedCryptoSelectionModal({
                     >
                       <div className="flex items-center space-x-3 mb-3">
                         <img
-                          src={asset.image}
+                          src={asset.logo_url}
                           alt={asset.name}
                           className="w-10 h-10 rounded-full"
                           onError={(e) => {
@@ -729,17 +695,22 @@ export function EnhancedCryptoSelectionModal({
                         </div>
                         <div className="text-right">
                           <p className="font-medium text-gray-900 dark:text-white">
-                            ${asset.current_price.toLocaleString()}
+                            ${(asset.current_price_usd || 0).toLocaleString()}
                           </p>
                           <p
                             className={`text-sm ${
-                              asset.price_change_percentage_24h >= 0
+                              (asset.price_change_percentage_24h || 0) >= 0
                                 ? "text-green-600 dark:text-green-400"
                                 : "text-red-600 dark:text-red-400"
                             }`}
                           >
-                            {asset.price_change_percentage_24h >= 0 ? "+" : ""}
-                            {asset.price_change_percentage_24h.toFixed(2)}%
+                            {(asset.price_change_percentage_24h || 0) >= 0
+                              ? "+"
+                              : ""}
+                            {(asset.price_change_percentage_24h || 0).toFixed(
+                              2
+                            )}
+                            %
                           </p>
                         </div>
                         <div className="ml-2">
@@ -782,7 +753,7 @@ export function EnhancedCryptoSelectionModal({
                                 type="number"
                                 value={
                                   selectedAsset?.average_price ||
-                                  asset.current_price
+                                  asset.current_price_usd
                                 }
                                 onChange={(e) =>
                                   updateAssetPrice(
@@ -844,7 +815,7 @@ export function EnhancedCryptoSelectionModal({
                   >
                     <div className="flex items-center space-x-3 mb-3">
                       <img
-                        src={asset.image}
+                        src={asset.logo_url}
                         alt={asset.name}
                         className="w-10 h-10 rounded-full"
                         onError={(e) => {
@@ -862,17 +833,19 @@ export function EnhancedCryptoSelectionModal({
                       </div>
                       <div className="text-right">
                         <p className="font-medium text-gray-900 dark:text-white">
-                          ${asset.current_price.toLocaleString()}
+                          ${(asset.current_price_usd || 0).toLocaleString()}
                         </p>
                         <p
                           className={`text-sm ${
-                            asset.price_change_percentage_24h >= 0
+                            (asset.price_change_percentage_24h || 0) >= 0
                               ? "text-green-600 dark:text-green-400"
                               : "text-red-600 dark:text-red-400"
                           }`}
                         >
-                          {asset.price_change_percentage_24h >= 0 ? "+" : ""}
-                          {asset.price_change_percentage_24h.toFixed(2)}%
+                          {(asset.price_change_percentage_24h || 0) >= 0
+                            ? "+"
+                            : ""}
+                          {(asset.price_change_percentage_24h || 0).toFixed(2)}%
                         </p>
                       </div>
                       <div className="ml-2">
@@ -915,7 +888,7 @@ export function EnhancedCryptoSelectionModal({
                               type="number"
                               value={
                                 selectedAsset?.average_price ||
-                                asset.current_price
+                                asset.current_price_usd
                               }
                               onChange={(e) =>
                                 updateAssetPrice(

@@ -10,7 +10,8 @@ export function Skeleton({ className, width, height }: SkeletonProps) {
   return (
     <div
       className={cn(
-        "animate-pulse rounded-md bg-gray-200 dark:bg-gray-700",
+        "animate-pulse rounded-md bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-700",
+        "bg-[length:200%_100%] animate-gradient-shift",
         className
       )}
       style={{
@@ -24,8 +25,9 @@ export function Skeleton({ className, width, height }: SkeletonProps) {
 // Metric Card Skeletons
 export function MetricCardSkeleton() {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <div className="flex items-center">
+    <div className="card-gradient group relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500/10 to-blue-500/10 backdrop-blur-sm border border-white/20 hover:border-violet-400/50 transition-all duration-300 hover:scale-105 p-6">
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      <div className="relative z-10 flex items-center">
         <Skeleton className="w-10 h-10 rounded-lg" />
         <div className="ml-4 flex-1">
           <Skeleton className="w-24 h-4 mb-2" />
@@ -57,35 +59,39 @@ export function MetricCardWithTrendSkeleton() {
 // Portfolio Card Skeletons
 export function PortfolioCardSkeleton() {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <Skeleton className="w-32 h-5 mb-2" />
-          <Skeleton className="w-20 h-4" />
+    <div className="card-glass group relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 hover:border-violet-400/50 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-violet-500/10 p-6">
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      <div className="relative z-10">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex-1">
+            <Skeleton className="w-32 h-5 mb-2" />
+            <Skeleton className="w-20 h-4" />
+          </div>
+          <div className="p-2 rounded-full bg-slate-700/50">
+            <Skeleton className="w-5 h-5" />
+          </div>
         </div>
-        <Skeleton className="w-5 h-5" />
-      </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Skeleton className="w-20 h-4" />
-          <Skeleton className="w-24 h-4" />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="w-20 h-4" />
+            <Skeleton className="w-24 h-6" />
+          </div>
+          <div className="flex items-center justify-between">
+            <Skeleton className="w-24 h-4" />
+            <Skeleton className="w-16 h-6 rounded-full" />
+          </div>
+          <div className="flex items-center justify-between">
+            <Skeleton className="w-16 h-4" />
+            <Skeleton className="w-20 h-4" />
+          </div>
         </div>
-        <div className="flex items-center justify-between">
-          <Skeleton className="w-24 h-4" />
-          <Skeleton className="w-16 h-6 rounded-full" />
-        </div>
-        <div className="flex items-center justify-between">
-          <Skeleton className="w-16 h-4" />
-          <Skeleton className="w-20 h-4" />
-        </div>
-      </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex space-x-2">
-          <Skeleton className="w-20 h-4" />
-          <Skeleton className="w-4 h-4" />
-          <Skeleton className="w-16 h-4" />
+        <div className="mt-6 pt-4 border-t border-slate-700/50">
+          <div className="flex space-x-4">
+            <Skeleton className="flex-1 h-8 rounded-lg" />
+            <Skeleton className="flex-1 h-8 rounded-lg" />
+          </div>
         </div>
       </div>
     </div>
@@ -241,7 +247,7 @@ export function LoadingSpinner({
   return (
     <div
       className={cn(
-        "animate-spin rounded-full border-2 border-gray-300 border-t-blue-600",
+        "animate-spin rounded-full border-2 border-slate-300 border-t-violet-600 dark:border-slate-600 dark:border-t-violet-400",
         sizeClasses[size],
         className
       )}

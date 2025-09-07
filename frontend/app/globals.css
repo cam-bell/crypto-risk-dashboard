@@ -4,13 +4,14 @@
 
 @layer base {
   :root {
+    /* Light theme with purple gradient system */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
@@ -22,40 +23,61 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 262.1 83.3% 57.8%;
     --radius: 0.5rem;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+
+    /* Custom purple gradient variables */
+    --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+    --gradient-secondary: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
+    --gradient-accent: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    --gradient-card: linear-gradient(
+      145deg,
+      rgba(139, 92, 246, 0.1) 0%,
+      rgba(59, 130, 246, 0.05) 100%
+    );
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    /* Dark theme with enhanced purple system */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 240 10% 3.9%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 262.1 83.3% 57.8%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    /* Enhanced dark theme gradients */
+    --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+    --gradient-secondary: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
+    --gradient-accent: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    --gradient-card: linear-gradient(
+      145deg,
+      rgba(139, 92, 246, 0.15) 0%,
+      rgba(59, 130, 246, 0.1) 100%
+    );
   }
 }
 
@@ -93,12 +115,39 @@
     @apply flex items-center p-6 pt-0;
   }
 
+  /* Enhanced gradient cards */
+  .card-gradient {
+    @apply relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500/10 to-blue-500/10 backdrop-blur-sm border border-white/20 hover:border-violet-400/50 transition-all duration-300 hover:scale-105;
+  }
+
+  .card-gradient::before {
+    @apply absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300;
+    content: "";
+  }
+
+  .card-glass {
+    @apply relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 hover:border-violet-400/50 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-violet-500/10;
+  }
+
+  .card-glass::before {
+    @apply absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500;
+    content: "";
+  }
+
   .btn {
     @apply inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .btn-primary {
     @apply bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2;
+  }
+
+  .btn-gradient {
+    @apply bg-gradient-primary text-white hover:shadow-glow-purple transition-all duration-300 h-10 px-4 py-2 rounded-lg font-medium;
+  }
+
+  .btn-gradient-secondary {
+    @apply bg-gradient-secondary text-white hover:shadow-glow-purple transition-all duration-300 h-10 px-4 py-2 rounded-lg font-medium;
   }
 
   .btn-secondary {
@@ -135,6 +184,50 @@
 
   .badge-outline {
     @apply text-foreground;
+  }
+
+  /* Gradient badges for risk levels */
+  .badge-risk-low {
+    @apply bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-300 border border-emerald-500/30;
+  }
+
+  .badge-risk-medium {
+    @apply bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/30;
+  }
+
+  .badge-risk-high {
+    @apply bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300 border border-orange-500/30;
+  }
+
+  .badge-risk-critical {
+    @apply bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-300 border border-red-500/30;
+  }
+
+  /* Animation utilities */
+  .hover-lift {
+    @apply transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hover-lift:hover {
+    @apply -translate-y-1 shadow-2xl;
+  }
+
+  .gradient-animate {
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+  }
+
+  .pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite alternate;
+  }
+
+  /* Glassmorphism effects */
+  .glass-effect {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
+
+  .glass-effect-dark {
+    @apply bg-slate-800/50 backdrop-blur-xl border border-slate-700/50;
   }
 }
 
@@ -178,10 +271,52 @@
   }
 }
 
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes pulseGlow {
+  from {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+  }
+  to {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.8);
+  }
+}
+
+@keyframes hoverLift {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-4px);
+  }
+}
+
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+.animate-gradient-shift {
+  animation: gradientShift 3s ease infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite alternate;
+}
+
+.animate-hover-lift {
+  animation: hoverLift 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

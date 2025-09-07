@@ -76,27 +76,47 @@ async def get_portfolios(
     """
     Get all portfolios with optional filtering and pagination
     """
-    from sqlalchemy.orm import joinedload
+    print(f"🔍 [Backend] Getting portfolios - skip: {skip}, limit: {limit}, user_id: {user_id}")
     
-    query = db.query(Portfolio).options(
-        joinedload(Portfolio.holdings).joinedload(PortfolioHolding.crypto_asset)
-    )
-    
-    if user_id:
-        query = query.filter(Portfolio.user_id == user_id)
-    
-    total = query.count()
-    portfolios = query.offset(skip).limit(limit).all()
-    
-    response = PortfolioListResponse(
-        portfolios=portfolios,
-        total=total,
-        page=(skip // limit) + 1,
-        page_size=limit
-    )
-    
-    # Clean NaN values to prevent JSON serialization issues
-    return clean_nan_values(response.dict())
+    try:
+        from sqlalchemy.orm import joinedload
+        
+        query = db.query(Portfolio).options(
+            joinedload(Portfolio.holdings).joinedload(PortfolioHolding.crypto_asset)
+        )
+        
+        if user_id:
+            print(f"🔍 [Backend] Filtering by user_id: {user_id}")
+            query = query.filter(Portfolio.user_id == user_id)
+        
+        total = query.count()
+        print(f"📊 [Backend] Total portfolios found: {total}")
+        
+        portfolios = query.offset(skip).limit(limit).all()
+        print(f"📋 [Backend] Returning {len(portfolios)} portfolios")
+        
+        # Log portfolio details
+        for i, portfolio in enumerate(portfolios):
+            print(f"📋 [Backend] Portfolio {i+1}: {portfolio.id} - {portfolio.name} (holdings: {len(portfolio.holdings)})")
+        
+        response = PortfolioListResponse(
+            portfolios=portfolios,
+            total=total,
+            page=(skip // limit) + 1,
+            page_size=limit
+        )
+        
+        # Clean NaN values to prevent JSON serialization issues
+        result = clean_nan_values(response.dict())
+        print(f"📤 [Backend] Returning response with {len(result.get('portfolios', []))} portfolios")
+        return result
+        
+    except Exception as e:
+        print(f"❌ [Backend] Error getting portfolios: {str(e)}")
+        print(f"❌ [Backend] Error type: {type(e)}")
+        import traceback
+        print(f"❌ [Backend] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to get portfolios: {str(e)}")
 
 
 @router.get("/{portfolio_id}", response_model=PortfolioResponse)
@@ -128,23 +148,53 @@ async def create_portfolio(
     """
     Create a new portfolio
     """
-    # Check if user already has a default portfolio
-    if portfolio.is_default:
-        existing_default = db.query(Portfolio).filter(
-            Portfolio.user_id == portfolio.user_id,
-            Portfolio.is_default == True
-        ).first()
-        if existing_default:
-            # Remove default flag from existing portfolio
-            existing_default.is_default = False
+    print(f"🚀 [Backend] Creating portfolio: {portfolio.name} for user: {portfolio.user_id}")
     
-    db_portfolio = Portfolio(**portfolio.dict())
-    db.add(db_portfolio)
-    db.commit()
-    db.refresh(db_portfolio)
-    
-    # Clean NaN values to prevent JSON serialization issues
-    return clean_nan_values(db_portfolio.__dict__)
+    try:
+        # Check if user already has a default portfolio
+        if portfolio.is_default:
+            existing_default = db.query(Portfolio).filter(
+                Portfolio.user_id == portfolio.user_id,
+                Portfolio.is_default == True
+            ).first()
+            if existing_default:
+                print(f"🔄 [Backend] Removing default flag from existing portfolio: {existing_default.id}")
+                # Remove default flag from existing portfolio
+                existing_default.is_default = False
+        
+        print(f"📝 [Backend] Creating portfolio with data: {portfolio.dict()}")
+        db_portfolio = Portfolio(**portfolio.dict())
+        db.add(db_portfolio)
+        try:
+            db.commit()
+            db.refresh(db_portfolio)
+            print(f"✅ [Backend] Database commit successful for portfolio: {db_portfolio.id}")
+        except Exception as commit_error:
+            print(f"❌ [Backend] Database commit failed: {str(commit_error)}")
+            db.rollback()
+            raise commit_error
+        
+        print(f"✅ [Backend] Portfolio created successfully: {db_portfolio.id} - {db_portfolio.name}")
+        print(f"📊 [Backend] Portfolio data: {db_portfolio.__dict__}")
+        
+        # Verify the portfolio was actually saved by querying it back
+        verification = db.query(Portfolio).filter(Portfolio.id == db_portfolio.id).first()
+        if verification:
+            print(f"✅ [Backend] Portfolio verification successful: {verification.name}")
+        else:
+            print(f"❌ [Backend] Portfolio verification failed - portfolio not found in database!")
+        
+        # Clean NaN values to prevent JSON serialization issues
+        result = clean_nan_values(db_portfolio.__dict__)
+        print(f"📤 [Backend] Returning portfolio: {result}")
+        return result
+        
+    except Exception as e:
+        print(f"❌ [Backend] Error creating portfolio: {str(e)}")
+        print(f"❌ [Backend] Error type: {type(e)}")
+        import traceback
+        print(f"❌ [Backend] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to create portfolio: {str(e)}")
 
 
 @router.put("/{portfolio_id}", response_model=PortfolioResponse)
@@ -228,49 +278,83 @@ async def create_portfolio_holding(
     """
     Add a new holding to a portfolio
     """
-    # Verify portfolio exists
-    portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
-    if not portfolio:
-        raise HTTPException(status_code=404, detail="Portfolio not found")
+    print(f"🚀 [Backend] Creating holding for portfolio: {portfolio_id}")
+    print(f"📝 [Backend] Holding data: {holding.dict()}")
     
-    # Check if holding already exists for this asset
-    existing_holding = db.query(PortfolioHolding).filter(
-        PortfolioHolding.portfolio_id == portfolio_id,
-        PortfolioHolding.crypto_asset_id == holding.crypto_asset_id
-    ).first()
-    
-    if existing_holding:
-        raise HTTPException(
-            status_code=400, 
-            detail="Holding for this asset already exists in the portfolio"
+    try:
+        # Verify portfolio exists
+        portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id).first()
+        if not portfolio:
+            print(f"❌ [Backend] Portfolio not found: {portfolio_id}")
+            raise HTTPException(status_code=404, detail="Portfolio not found")
+        
+        print(f"✅ [Backend] Portfolio found: {portfolio.name}")
+        
+        # Check if holding already exists for this asset
+        existing_holding = db.query(PortfolioHolding).filter(
+            PortfolioHolding.portfolio_id == portfolio_id,
+            PortfolioHolding.crypto_asset_id == holding.crypto_asset_id
+        ).first()
+        
+        if existing_holding:
+            print(f"⚠️ [Backend] Holding already exists for asset: {holding.crypto_asset_id}")
+            raise HTTPException(
+                status_code=400, 
+                detail="Holding for this asset already exists in the portfolio"
+            )
+        
+        # Calculate derived fields
+        total_invested = holding.quantity * holding.average_buy_price_usd
+        current_value = total_invested  # For now, assume current value equals invested
+        profit_loss = current_value - total_invested
+        profit_loss_percentage = (profit_loss / total_invested) * 100 if total_invested > 0 else 0
+        
+        print(f"💰 [Backend] Calculated values - total_invested: {total_invested}, current_value: {current_value}")
+        
+        db_holding = PortfolioHolding(
+            portfolio_id=portfolio_id,
+            crypto_asset_id=holding.crypto_asset_id,
+            quantity=holding.quantity,
+            average_buy_price_usd=holding.average_buy_price_usd,
+            total_invested_usd=total_invested,
+            current_value_usd=current_value,
+            profit_loss_usd=profit_loss,
+            profit_loss_percentage=profit_loss_percentage,
+            notes=holding.notes
         )
-    
-    # Calculate derived fields
-    total_invested = holding.quantity * holding.average_buy_price_usd
-    current_value = total_invested  # For now, assume current value equals invested
-    profit_loss = current_value - total_invested
-    profit_loss_percentage = (profit_loss / total_invested) * 100 if total_invested > 0 else 0
-    
-    db_holding = PortfolioHolding(
-        portfolio_id=portfolio_id,
-        crypto_asset_id=holding.crypto_asset_id,
-        quantity=holding.quantity,
-        average_buy_price_usd=holding.average_buy_price_usd,
-        total_invested_usd=total_invested,
-        current_value_usd=current_value,
-        profit_loss_usd=profit_loss,
-        profit_loss_percentage=profit_loss_percentage,
-        notes=holding.notes
-    )
-    
-    db.add(db_holding)
-    db.commit()
-    db.refresh(db_holding)
-    
-    # Update portfolio totals
-    _update_portfolio_totals(db, portfolio_id)
-    
-    return db_holding
+        
+        db.add(db_holding)
+        try:
+            db.commit()
+            db.refresh(db_holding)
+            print(f"✅ [Backend] Database commit successful for holding: {db_holding.id}")
+        except Exception as commit_error:
+            print(f"❌ [Backend] Database commit failed for holding: {str(commit_error)}")
+            db.rollback()
+            raise commit_error
+        
+        print(f"✅ [Backend] Holding created successfully: {db_holding.id}")
+        
+        # Update portfolio totals
+        print(f"🔄 [Backend] Updating portfolio totals for: {portfolio_id}")
+        _update_portfolio_totals(db, portfolio_id)
+        
+        # Verify the holding was actually saved
+        verification = db.query(PortfolioHolding).filter(PortfolioHolding.id == db_holding.id).first()
+        if verification:
+            print(f"✅ [Backend] Holding verification successful: {verification.id}")
+        else:
+            print(f"❌ [Backend] Holding verification failed - holding not found in database!")
+        
+        print(f"📤 [Backend] Returning holding: {db_holding.__dict__}")
+        return db_holding
+        
+    except Exception as e:
+        print(f"❌ [Backend] Error creating holding: {str(e)}")
+        print(f"❌ [Backend] Error type: {type(e)}")
+        import traceback
+        print(f"❌ [Backend] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to create holding: {str(e)}")
 
 
 @router.put("/{portfolio_id}/holdings/{holding_id}", response_model=PortfolioHoldingResponse)
